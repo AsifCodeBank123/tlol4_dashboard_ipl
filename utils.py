@@ -41,18 +41,29 @@ def cache_data(ttl: int | None = None) -> Callable:
 
 
 def connect_google_sheet(config: dict[str, Any] | None = None) -> gspread.Spreadsheet:
-    """Connect to Google Sheets using service account authentication."""
     cfg = config or get_config()
     sheets_cfg = cfg["google_sheets"]
-    credentials_path = Path(sheets_cfg["credentials_file"])
 
-    if not credentials_path.exists():
-        raise FileNotFoundError(
-            f"Google service account file not found: {credentials_path}. "
-            "Add the file or update google_sheets.credentials_file in config.json."
+    try:
+        # Streamlit Cloud
+        credentials = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=GOOGLE_SCOPES,
+        )
+    except Exception:
+        # Local execution
+        credentials_path = Path(sheets_cfg["credentials_file"])
+
+        if not credentials_path.exists():
+            raise FileNotFoundError(
+                f"Google service account file not found: {credentials_path}"
+            )
+
+        credentials = Credentials.from_service_account_file(
+            credentials_path,
+            scopes=GOOGLE_SCOPES,
         )
 
-    credentials = Credentials.from_service_account_file(credentials_path, scopes=GOOGLE_SCOPES)
     client = gspread.authorize(credentials)
     return client.open_by_key(sheets_cfg["sheet_id"])
 
