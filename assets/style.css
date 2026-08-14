@@ -1,0 +1,508 @@
+/* IPL-inspired corporate sports dashboard with light and dark mode support. */
+
+:root {
+    --page-bg: #f8fafc;
+    --surface-bg: #ffffff;
+    --surface-soft: #f1f5f9;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-soft: rgba(148, 163, 184, 0.28);
+    --shadow-soft: 0 12px 30px rgba(15, 23, 42, 0.06);
+    --shadow-hover: 0 18px 44px rgba(15, 23, 42, 0.12);
+    --accent-color: #f59e0b;
+    --primary-color: #111827;
+    --secondary-color: #dc2626;
+
+    --team-rachita-royals-bg: rgba(255, 79, 163, 0.08);
+    --team-gayatri-titans-bg: rgba(37, 99, 235, 0.08);
+    --team-komal-knight-riders-bg: rgba(109, 40, 217, 0.08);
+    --team-royal-challengers-bijal-bg: rgba(220, 38, 38, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --page-bg: #09090b;
+        --surface-bg: #111827;
+        --surface-soft: #1f2937;
+        --text-main: #f8fafc;
+        --text-muted: #cbd5e1;
+        --border-soft: rgba(148, 163, 184, 0.18);
+        --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.32);
+        --shadow-hover: 0 18px 44px rgba(0, 0, 0, 0.44);
+
+        --team-rachita-royals-bg: rgba(255, 79, 163, 0.18);
+        --team-gayatri-titans-bg: rgba(37, 99, 235, 0.20);
+        --team-komal-knight-riders-bg: rgba(109, 40, 217, 0.22);
+        --team-royal-challengers-bijal-bg: rgba(220, 38, 38, 0.20);
+    }
+}
+
+html, body, [class*="css"] {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.stApp {
+    background: var(--page-bg);
+    color: var(--text-main);
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background: var(--border-soft);
+    margin: 2rem 0;
+}
+
+.hero-banner {
+    padding: 2rem;
+    border-radius: 1.5rem;
+    background:
+        radial-gradient(circle at top left, rgba(245, 158, 11, 0.40), transparent 32%),
+        linear-gradient(135deg, #111827, #dc2626 62%, #f59e0b);
+    color: #ffffff;
+    box-shadow: var(--shadow-soft);
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.hero-banner h1,
+.hero-banner h2 {
+    margin: 0 0 0.5rem 0;
+    font-weight: 900;
+    color: #ffffff;
+}
+
+.hero-banner h1 {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+.hero-banner p {
+    margin: 0.35rem 0 0 0 !important;
+    opacity: 0.95 !important;
+    font-size: 1.08rem !important;
+    color: #ffffff !important;
+}
+
+.dashboard-card,
+.fixture-card,
+.leader-card,
+.metric-card,
+.team-card,
+.rules-card,
+.upcoming-card,
+.team-explorer-card,
+.sport-contribution-card {
+    background: var(--surface-bg);
+    color: var(--text-main);
+    border-radius: 1.15rem;
+    padding: 1.15rem;
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    height: 100%;
+}
+
+.dashboard-card:hover,
+.fixture-card:hover,
+.leader-card:hover,
+.metric-card:hover,
+.team-card:hover,
+.rules-card:hover,
+.upcoming-card:hover,
+.team-explorer-card:hover,
+.sport-contribution-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+}
+
+.team-card,
+.team-explorer-card {
+    border-left: 0.45rem solid var(--team-color);
+}
+
+.team-card {
+    text-align: center;
+}
+
+.card-label {
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    margin-bottom: 0.35rem;
+}
+
+.card-value {
+    color: var(--text-main);
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.card-subtle {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    margin-top: 0.35rem;
+}
+
+.fixture-card,
+.leader-card {
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.fixture-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.fixture-venue {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.participant-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0.8rem 0 0.35rem 0;
+}
+
+.participant-card {
+    flex: 1;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-soft);
+    background: var(--surface-soft);
+    border-left: 5px solid var(--team-color, var(--accent-color));
+    transition: all 0.2s ease;
+}
+
+.participant-card:hover {
+    transform: translateY(-2px);
+}
+
+.leader-card .participant-card {
+    text-align: left !important;
+    padding: 0.85rem;
+    margin-top: auto;
+}
+
+.participant-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 0.25rem;
+}
+
+.participant-team {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.vs-section {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--accent-color);
+    min-width: 50px;
+    text-align: center;
+    font-style: italic;
+}
+
+.team-rachita-royals {
+    border-left: 5px solid #ff4fa3;
+    background: var(--team-rachita-royals-bg) !important;
+}
+
+.team-gayatri-titans {
+    border-left: 5px solid #2563eb;
+    background: var(--team-gayatri-titans-bg) !important;
+}
+
+.team-komal-knight-riders {
+    border-left: 5px solid #6d28d9;
+    background: var(--team-komal-knight-riders-bg) !important;
+}
+
+.team-royal-challengers-bijal {
+    border-left: 5px solid #dc2626;
+    background: var(--team-royal-challengers-bijal-bg) !important;
+}
+
+.status-badge,
+.sport-badge,
+.match-badge {
+    color: white;
+    display: inline-block;
+    padding: 0.28rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.sport-badge {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.status-badge.upcoming {
+    background: color-mix(in srgb, var(--accent-color), #000000 15%);
+}
+
+.match-badge {
+    background: var(--accent-color);
+    color: #111827;
+    margin-left: 0.4rem;
+}
+
+.rules-card ul {
+    margin-top: 0.4rem;
+    padding-left: 1.2rem;
+}
+
+.rules-card li {
+    margin-bottom: 0.35rem;
+}
+
+.medal {
+    font-size: 1.35rem;
+    margin-right: 0.35rem;
+}
+
+.top-rank {
+    border-color: rgba(245, 158, 11, 0.4);
+    background:
+        linear-gradient(135deg, rgba(245, 158, 11, 0.06), transparent 45%),
+        var(--surface-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+    .top-rank {
+        background:
+            linear-gradient(135deg, rgba(245, 158, 11, 0.12), transparent 45%),
+            var(--surface-bg);
+    }
+}
+
+.team-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.7rem;
+    margin-bottom: 0.45rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--team-color), transparent 86%);
+    border: 1px solid color-mix(in srgb, var(--team-color), white 58%);
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+.sidebar-brand {
+    background:
+        radial-gradient(circle at top left, rgba(245, 158, 11, 0.15), transparent 45%),
+        linear-gradient(135deg, rgba(220, 38, 38, 0.08), rgba(17, 24, 39, 0.04)) !important;
+    border: 1px solid var(--border-soft) !important;
+    border-radius: 1rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+    .sidebar-brand {
+        background:
+            radial-gradient(circle at top left, rgba(245, 158, 11, 0.28), transparent 36%),
+            linear-gradient(135deg, rgba(220, 38, 38, 0.18), rgba(17, 24, 39, 0.10)) !important;
+    }
+}
+
+.sidebar-title {
+    color: var(--text-main);
+    font-weight: 900;
+    font-size: 1.12rem;
+}
+
+.sidebar-subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.2rem;
+}
+
+.team-explorer-banner {
+    padding: 1.6rem;
+    border-radius: 1.25rem;
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.22), transparent 30%),
+        linear-gradient(135deg, var(--team-color), #111827);
+    color: #ffffff;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: var(--shadow-soft);
+}
+
+.team-explorer-banner h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: clamp(1.5rem, 3vw, 2.4rem);
+    font-weight: 900;
+}
+
+.team-explorer-banner p {
+    margin: 0.35rem 0 0 0;
+    color: rgba(255, 255, 255, 0.90);
+}
+
+.team-logo-large {
+    font-size: 3.2rem;
+    margin-right: 0.75rem;
+}
+
+.progress-bar-outer {
+    width: 100%;
+    height: 0.75rem;
+    background: var(--surface-soft);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--border-soft);
+    margin-top: 0.35rem;
+}
+
+.progress-bar-inner {
+    height: 100%;
+    width: var(--bar-width);
+    background: linear-gradient(90deg, var(--team-color), var(--accent-color));
+    border-radius: 999px;
+}
+
+.explorer-roster-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 0.45rem 0;
+}
+
+[data-testid="stSidebar"] {
+    background-color: var(--surface-bg) !important;
+}
+
+[data-testid="stSidebar"] .sidebar-title,
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown p {
+    color: var(--text-main) !important;
+}
+
+[data-testid="stSidebar"] .sidebar-subtitle,
+[data-testid="stSidebar"] .card-subtle,
+[data-testid="stSidebar"] .card-label {
+    color: var(--text-muted) !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stPageLink"] a,
+[data-testid="stPageLink"] a,
+[data-testid="stSidebarNav"] a,
+[data-testid="stSidebarNav"] span {
+    color: var(--text-main) !important;
+    background-color: transparent !important;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+[data-testid="stPageLink"] a *,
+[data-testid="stSidebarNav"] a * {
+    color: var(--text-main) !important;
+    fill: var(--text-main) !important;
+}
+
+[data-testid="stPageLink"] a:hover,
+[data-testid="stSidebarNav"] a:hover,
+[data-testid="stSidebarNav"] li:hover {
+    background-color: var(--surface-soft) !important;
+    color: var(--secondary-color) !important;
+}
+
+[data-testid="stPageLink"] a:hover *,
+[data-testid="stSidebarNav"] a:hover * {
+    color: var(--secondary-color) !important;
+    fill: var(--secondary-color) !important;
+}
+
+.stButton > button,
+[data-testid="stPageLink"] a {
+    border-radius: 999px;
+    font-weight: 800;
+}
+
+.stButton > button {
+    background-color: var(--surface-soft) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-soft) !important;
+}
+
+.stButton > button:hover {
+    background-color: var(--secondary-color) !important;
+    color: #ffffff !important;
+    border-color: var(--secondary-color) !important;
+}
+
+[data-testid="stMetric"] {
+    background: var(--surface-bg);
+    color: var(--text-main);
+    border-radius: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-soft);
+}
+
+@media (max-width: 768px) {
+    .hero-banner,
+    .team-explorer-banner {
+        padding: 1.4rem;
+    }
+
+    .dashboard-card,
+    .fixture-card,
+    .leader-card,
+    .metric-card,
+    .team-card,
+    .rules-card,
+    .upcoming-card,
+    .team-explorer-card,
+    .sport-contribution-card {
+        padding: 1rem;
+    }
+
+    .participant-section {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .participant-card {
+        width: 100%;
+    }
+
+    .vs-section {
+        margin: 0.25rem 0;
+        transform: rotate(90deg);
+        min-height: auto;
+    }
+}

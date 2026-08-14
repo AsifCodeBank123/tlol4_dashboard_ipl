@@ -1,0 +1,16 @@
+venv/
+.env
+
+__pycache__/
+*.pyc
+
+.idea/
+.vscode/
+
+build/
+dist/
+
+*.log
+
+node_modules/
+service_account.json

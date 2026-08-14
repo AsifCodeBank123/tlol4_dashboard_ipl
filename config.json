@@ -1,0 +1,197 @@
+{
+    "app": {
+        "title": "TLOL4 Sports League Dashboard",
+        "page_icon": "🏆",
+        "layout": "wide",
+        "default_page_title": "TLOL4 Sports League",
+        "tournament_name": "TLOL4 Sports League 2026",
+        "tagline": "One League. Many Sports. One Champion.",
+        "footer_text": "Built with Streamlit • TLOL4 Sports League"
+    },
+    "branding": {
+        "sidebar_title": "🏆 TLOL4 Sports League",
+        "sidebar_subtitle": "Fixtures, scores, teams, and champions",
+        "home_button_label": "🏠 Home",
+        "fixtures_button_label": "📅 Fixtures",
+        "leaderboard_button_label": "🏅 Leaderboard"
+    },
+    "google_sheets": {
+        "credentials_file": "service_account.json",
+        "sheet_id": "1VbRoyIdtwPiKxOMivrDmjaX5xxHchZ3wq8k19EBhgIQ",
+        "worksheets": {
+            "participants": "Participants",
+            "fixtures": "Fixtures"
+        }
+    },
+    "teams": [
+        {
+            "name": "Rachita Royals",
+            "emoji": "🩷",
+            "color": "#ff4fa3",
+            "accent": "#ffe4f1",
+            "captain": "Rachita",
+            "slogan": "Play bold. Rule the league.",
+            "fallback_members": [
+                "Rachita",
+                "Asif",
+                "Neelakshi",
+                "Sneha",
+                "Rahul"
+            ],
+            "page": "pages/Team_Rachita_Royals.py"
+        },
+        {
+            "name": "Gayatri Titans",
+            "emoji": "🔵",
+            "color": "#2563eb",
+            "accent": "#dbeafe",
+            "captain": "Gayatri",
+            "slogan": "Rise strong. Finish stronger.",
+            "fallback_members": [
+                "Gayatri",
+                "Wilfred",
+                "Umesh",
+                "Johnson",
+                "Saurabh"
+            ],
+            "page": "pages/Team_Gayatri_Titans.py"
+        },
+        {
+            "name": "Komal Knight Riders",
+            "emoji": "💜",
+            "color": "#6d28d9",
+            "accent": "#ede9fe",
+            "captain": "Komal",
+            "slogan": "Charge through every challenge.",
+            "fallback_members": [
+                "Komal",
+                "Pritesh",
+                "Manikandan",
+                "Irshad",
+                "Hitesh"
+            ],
+            "page": "pages/Team_Komal_Knight_Riders.py"
+        },
+        {
+            "name": "Royal Challengers Bijal",
+            "emoji": "❤️",
+            "color": "#dc2626",
+            "accent": "#fee2e2",
+            "captain": "Bijal",
+            "slogan": "Challenge accepted. Victory targeted.",
+            "fallback_members": [
+                "Bijal",
+                "Raaj",
+                "Sanskar",
+                "Somansh",
+                "Blessen"
+            ],
+            "page": "pages/Team_Royal_Challengers_Bijal.py"
+        }
+    ],
+    "theme": {
+        "primary_color": "#111827",
+        "secondary_color": "#dc2626",
+        "accent_color": "#f59e0b",
+        "success_color": "#16a34a",
+        "warning_color": "#f59e0b",
+        "danger_color": "#dc2626",
+        "muted_color": "#64748b"
+    },
+    "data": {
+        "refresh_interval_seconds": 300,
+        "points_decimals": 0,
+        "status_colors": {
+            "Completed": "#16a34a",
+            "Live": "#dc2626",
+            "Upcoming": "#2563eb",
+            "Postponed": "#f59e0b"
+        }
+    },
+    "sports_rules": {
+        "Cricket": {
+            "icon": "🏏",
+            "rules": [
+                "Team captains must confirm playing members before match start.",
+                "Umpire or organiser decision is final.",
+                "Late arrival may lead to walkover as per organiser discretion."
+            ],
+            "card_details": [
+                "Win points, bonus points, and fair play points can be updated in the Participants sheet.",
+                "Use the Fixtures sheet Status column to mark Upcoming, Live, Completed, or Postponed."
+            ]
+        },
+        "Tennis": {
+            "icon": "🎾",
+            "rules": [
+                "Standard singles format unless organisers communicate otherwise.",
+                "Players must report at the venue before the scheduled time.",
+                "Final score should be confirmed by both participants."
+            ],
+            "card_details": [
+                "Fixture card shows participant, team, venue, match number, and status.",
+                "Participant points are merged across all sports on the leaderboard."
+            ]
+        },
+        "Foosball": {
+            "icon": "⚽",
+            "rules": [
+                "No spinning rods unless organisers explicitly allow it.",
+                "First player or team to the agreed score wins.",
+                "Disputes should be escalated to the organiser immediately."
+            ],
+            "card_details": [
+                "Use Match column for table or match number.",
+                "Use Venue column for table location or office zone."
+            ]
+        },
+        "Carrom": {
+            "icon": "🎯",
+            "rules": [
+                "Players should follow standard carrom board rules agreed before the match.",
+                "Queen cover rule applies if organisers enable it for the round.",
+                "Winner and bonus points should be updated after result confirmation."
+            ],
+            "card_details": [
+                "Each fixture card shows participant versus participant with team colors.",
+                "Completed fixtures remain visible under sport tabs for easy tracking."
+            ]
+        },
+        "Bowling": {
+            "icon": "🎳",
+            "rules": [
+                "Highest score after the agreed number of frames wins.",
+                "Participants must follow venue safety instructions.",
+                "Tie-breaker rules should be decided by the organiser."
+            ],
+            "card_details": [
+                "Use Match column for lane or match reference.",
+                "Use Status to separate upcoming and completed fixtures."
+            ]
+        },
+        "Badminton": {
+            "icon": "🏸",
+            "rules": [
+                "Standard singles or doubles format as announced by organisers.",
+                "Line calls should be respected unless a referee is assigned.",
+                "Players must be ready at the court on time."
+            ],
+            "card_details": [
+                "Cards support individual and team entries.",
+                "Use Participant 1 and Participant 2 for player names or team names."
+            ]
+        },
+        "Table Tennis": {
+            "icon": "🏓",
+            "rules": [
+                "Serve rotation and game format should be agreed before the match.",
+                "Players must report scores after match completion.",
+                "Organiser decision is final for disputed calls."
+            ],
+            "card_details": [
+                "Each tab automatically appears when the sport exists in the Fixtures sheet.",
+                "No code change is needed for adding new sports."
+            ]
+        }
+    }
+}
