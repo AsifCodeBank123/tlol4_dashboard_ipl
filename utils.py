@@ -237,24 +237,34 @@ def safe_load(loader: Callable[[], pd.DataFrame], empty_columns: list[str]) -> p
         st.warning(str(exc))
         return pd.DataFrame(columns=empty_columns)
 
-def inject_stadium_audio() -> None:
-    """Injects a high-voltage, flattened HTML5 stadium sound engine with autoplay."""
+def inject_stadium_audio(
+    anthem_url: str | None = None,
+    anthem_title: str = "STADIUM BROADCAST LIVE",
+    subtitle: str = "Theme Anthem Streaming Autoplay",
+) -> None:
+    """Injects dynamic, team-specific or tournament-wide HTML5 sound console."""
     import streamlit as st
-    
-    # Flattened string architecture to prevent Streamlit markdown parser escaping
-    audio_html = (
-        '<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 58, 138, 0.4)); border: 2px solid #fbbf24; border-radius: 1rem; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); position: relative; overflow: hidden;">'
-        '<div style="position: absolute; top: 8px; right: 12px; width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981;"></div>'
-        '<p style="margin: 0 0 0.25rem 0; color: #fbbf24 !important; font-size: 0.85rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;">🏟️ STADIUM BROADCAST LIVE</p>'
-        '<p style="margin: 0 0 0.75rem 0; color: #94a3b8 !important; font-size: 0.75rem; font-weight: 600;">Theme Anthem Streaming Autoplay</p>'
-        '<div style="display: flex; justify-content: center; align-items: center; width: 100%; overflow: hidden; border-radius: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.4rem;">'
-        '<audio autoplay loop controls style="width: 100%; height: 32px; outline: none;">'
-        '<source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">'
-        'Your browser does not support the audio element.'
-        '</audio>'
-        '</div>'
-        '<div style="margin-top: 0.5rem; color: #64748b !important; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">⚡ Arena Atmosphere Active ⚡</div>'
-        '</div>'
+
+    # Default general league soundhelix loop if no custom anthem provided
+    audio_source = (
+        anthem_url
+        if anthem_url
+        else "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
     )
-    
+
+    audio_html = (
+        f'<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 58, 138, 0.4)); border: 2px solid #fbbf24; border-radius: 1rem; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); position: relative; overflow: hidden;">'
+        f'<div style="position: absolute; top: 8px; right: 12px; width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981;"></div>'
+        f'<p style="margin: 0 0 0.25rem 0; color: #fbbf24 !important; font-size: 0.85rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;">🏟️ {anthem_title}</p>'
+        f'<p style="margin: 0 0 0.75rem 0; color: #94a3b8 !important; font-size: 0.75rem; font-weight: 600;">{subtitle}</p>'
+        f'<div style="display: flex; justify-content: center; align-items: center; width: 100%; overflow: hidden; border-radius: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.4rem;">'
+        f'<audio autoplay loop controls style="width: 100%; height: 32px; outline: none;">'
+        f'<source src="{audio_source}" type="audio/mpeg">'
+        f"Your browser does not support the audio element."
+        f"</audio>"
+        f"</div>"
+        f'<div style="margin-top: 0.5rem; color: #64748b !important; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">⚡ Arena Atmosphere Active ⚡</div>'
+        f"</div>"
+    )
+
     st.sidebar.markdown(audio_html, unsafe_allow_html=True)

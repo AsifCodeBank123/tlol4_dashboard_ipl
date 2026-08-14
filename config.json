@@ -6,7 +6,8 @@
         "default_page_title": "TLOL4 Sports League",
         "tournament_name": "TLOL4 Sports League 2026",
         "tagline": "One League. Many Sports. One Champion.",
-        "footer_text": "Built with Streamlit • TLOL4 Sports League"
+        "footer_text": "Built with Streamlit • TLOL4 Sports League",
+        "default_anthem": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
     },
     "branding": {
         "sidebar_title": "🏆 TLOL4 Sports League",
@@ -23,72 +24,54 @@
             "fixtures": "Fixtures"
         }
     },
+    
     "teams": [
         {
-            "name": "Rachita Royals",
-            "emoji": "🩷",
-            "color": "#ff4fa3",
-            "accent": "#ffe4f1",
-            "captain": "Rachita",
-            "slogan": "Play bold. Rule the league.",
-            "fallback_members": [
-                "Rachita",
-                "Asif",
-                "Neelakshi",
-                "Sneha",
-                "Rahul"
-            ],
-            "page": "pages/Team_Rachita_Royals.py"
+            "name": "Gayatri Indians",
+            "short_name": "GI",
+            "color": "#004ba0",
+            "emoji": "🌀",
+            "logo": "assets/logos/gi.png",
+            "slogan": "Duniya Hila Denge 💥",
+            "captain": "Gayatri",
+            "page": "pages/Team_Gayatri_Indians.py",
+            "anthem": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
         },
         {
-            "name": "Gayatri Titans",
-            "emoji": "🔵",
-            "color": "#2563eb",
-            "accent": "#dbeafe",
-            "captain": "Gayatri",
-            "slogan": "Rise strong. Finish stronger.",
-            "fallback_members": [
-                "Gayatri",
-                "Wilfred",
-                "Umesh",
-                "Johnson",
-                "Saurabh"
-            ],
-            "page": "pages/Team_Gayatri_Titans.py"
+            "name": "Pooja Super Kings",
+            "short_name": "PSK",
+            "color": "#facc15",
+            "emoji": "🦁",
+            "logo": "assets/logos/psk.png",
+            "slogan": "Whistle Podu & Roar 💛",
+            "captain": "Pooja",
+            "page": "pages/Team_Pooja_Super_Kings.py",
+            "anthem": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
         },
         {
             "name": "Komal Knight Riders",
-            "emoji": "💜",
-            "color": "#6d28d9",
-            "accent": "#ede9fe",
+            "short_name": "KKR",
+            "color": "#3b0764",
+            "emoji": "⚔️",
+            "logo": "assets/logos/kkr.png",
+            "slogan": "Korbo Lorbo Jeetbo Re 💜",
             "captain": "Komal",
-            "slogan": "Charge through every challenge.",
-            "fallback_members": [
-                "Komal",
-                "Pritesh",
-                "Manikandan",
-                "Irshad",
-                "Hitesh"
-            ],
-            "page": "pages/Team_Komal_Knight_Riders.py"
+            "page": "pages/Team_Komal_Knight_Riders.py",
+            "anthem": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
         },
         {
-            "name": "Royal Challengers Bijal",
-            "emoji": "❤️",
+            "name": "Royal Challengers of Bhagyashree",
+            "short_name": "RCB",
             "color": "#dc2626",
-            "accent": "#fee2e2",
-            "captain": "Bijal",
-            "slogan": "Challenge accepted. Victory targeted.",
-            "fallback_members": [
-                "Bijal",
-                "Raaj",
-                "Sanskar",
-                "Somansh",
-                "Blessen"
-            ],
-            "page": "pages/Team_Royal_Challengers_Bijal.py"
+            "emoji": "👑",
+            "logo": "assets/logos/rcb.png",
+            "slogan": "Play Bold & Conquer ❤️",
+            "captain": "Bhagyashree",
+            "page": "pages/Team_Royal_Challengers_Bhagyashree.py",
+            "anthem": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
         }
     ],
+    
     "theme": {
         "primary_color": "#111827",
         "secondary_color": "#dc2626",

@@ -506,3 +506,13 @@ hr {
         min-height: auto;
     }
 }
+
+/* Remove tooltip hover popups on the sidebar toggle */
+[data-testid="stSidebarCollapsedControl"] div[data-baseweb="tooltip"],
+[data-testid="stSidebarCollapseButton"] div[data-baseweb="tooltip"],
+div[data-baseweb="tooltip"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}

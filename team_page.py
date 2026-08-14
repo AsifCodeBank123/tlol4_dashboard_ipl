@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import base64
+import os
+from pathlib import Path
 import pandas as pd
 import streamlit as st
 
@@ -11,6 +14,7 @@ from utils import (
     get_sport_icon,
     get_team_meta,
     get_team_scores,
+    inject_stadium_audio,
     load_fixtures,
     load_participants,
     safe_load,
@@ -75,30 +79,51 @@ def render_card(label: str, value: str, detail: str = "") -> None:
     st.markdown(html, unsafe_allow_html=True)
 
 
+def _get_image_base64(image_path: str) -> str | None:
+    """Convert local image file to base64 string for direct HTML embedding."""
+    if image_path and os.path.exists(image_path):
+        suffix = Path(image_path).suffix.replace(".", "").lower()
+        mime_type = "image/png" if suffix == "png" else f"image/{suffix}"
+        with open(image_path, "rb") as img_file:
+            encoded = base64.b64encode(img_file.read()).decode()
+            return f"data:{mime_type};base64,{encoded}"
+    return None
+
+
 def render_team_banner(team_name: str, team_df: pd.DataFrame, team_scores: pd.DataFrame) -> None:
-    """Render the high-voltage IPL Franchise Banner."""
+    """Render the high-voltage IPL Franchise Banner with custom Logo support."""
     team_cfg = get_team_config(team_name)
     meta = get_team_meta(team_name)
     total_points = team_df["Points"].sum() if not team_df.empty else 0
     captain = team_cfg.get("captain", "TBD")
     slogan = team_cfg.get("slogan", "One team. One target. One trophy.")
+    logo_path = team_cfg.get("logo", "")
 
     rank = "-"
     if not team_scores.empty and team_name in team_scores["Team"].values:
         ranked = team_scores.reset_index(drop=True)
         rank = int(ranked.index[ranked["Team"].eq(team_name)][0]) + 1
 
+    # Encode logo to base64 or fallback to emoji with glowing drop shadow
+    img_b64 = _get_image_base64(logo_path)
+    if img_b64:
+        logo_html = f'<img src="{img_b64}" style="width: 75px; height: 75px; object-fit: contain; filter: drop-shadow(0 0 10px {meta["color"]});" />'
+    else:
+        logo_html = f'<span style="font-size: 3.5rem; filter: drop-shadow(0 0 12px {meta["color"]});">{meta["emoji"]}</span>'
+
     banner_html = (
-        f'<div class="team-explorer-banner" style="position: relative; padding: 2.5rem 2rem; border-radius: 1.25rem; background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 58, 138, 0.85)); border-left: 8px solid {meta["color"]}; border-top: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15); border-bottom: 1px solid rgba(255,255,255,0.15); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); margin-bottom: 2rem; overflow: hidden;">'
-        f'<div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">'
-        f'<span style="font-size: 3rem; filter: drop-shadow(0 0 10px {meta["color"]});">{meta["emoji"]}</span>'
-        f'<h2 style="margin: 0; color: #ffffff !important; font-weight: 900; font-size: 2.5rem; letter-spacing: -0.5px; uppercase;">{team_name}</h2>'
+        f'<div class="team-explorer-banner" style="position: relative; padding: 2.5rem 2rem; border-radius: 1.25rem; background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 58, 138, 0.85)); border-left: 8px solid {meta["color"]}; border-top: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15); border-bottom: 1px solid rgba(255,255,255,0.15); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); margin-bottom: 2rem; overflow: hidden;">'
+        f'<div style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 0.5rem;">'
+        f'{logo_html}'
+        f'<div>'
+        f'<h2 style="margin: 0; color: #ffffff !important; font-weight: 900; font-size: 2.6rem; letter-spacing: -0.5px; text-transform: uppercase;">{team_name}</h2>'
+        f'<p style="margin: 0.25rem 0 0 0; color: #fbbf24 !important; font-size: 1.1rem; font-weight: 700; font-style: italic;">"{slogan}"</p>'
         f'</div>'
-        f'<p style="margin: 0.25rem 0 0.75rem 0; color: #fbbf24 !important; font-size: 1.1rem; font-weight: 700; font-style: italic;">"{slogan}"</p>'
-        f'<div style="display: flex; gap: 1.5rem; flex-wrap: wrap; color: #cbd5e1 !important; font-size: 0.95rem; font-weight: 600;">'
+        f'</div>'
+        f'<div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1); color: #cbd5e1 !important; font-size: 0.95rem; font-weight: 600;">'
         f'<span>👑 Captain: <strong style="color: white;">{captain}</strong></span>'
-        f'<span>📊 Rank: <strong style="color: #fbbf24;">#{rank}</strong></span>'
-        f'<span>⚡ Points: <strong style="color: white;">{format_points(total_points)} PTS</strong></span>'
+        f'<span>📊 Points Table Rank: <strong style="color: #fbbf24;">#{rank}</strong></span>'
+        f'<span>⚡ Cumulative Score: <strong style="color: white;">{format_points(total_points)} PTS</strong></span>'
         f'</div>'
         f'</div>'
     )
@@ -118,13 +143,12 @@ def render_sport_contributions(team_df: pd.DataFrame, team_color: str) -> None:
         .sort_values("Points", ascending=False)
     )
     max_points = float(sport_points["Points"].max()) if not sport_points.empty else 1.0
-    
+
     rows = []
     for _, row in sport_points.iterrows():
         width = max(6, int((float(row["Points"]) / max_points) * 100)) if max_points else 0
         icon = get_sport_icon(row["Sport"])
-        
-        # Completely flattened HTML row string to eliminate code-bleed rendering issues
+
         row_html = (
             f'<div style="margin-bottom: 1.2rem;">'
             f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; color: #ffffff !important; font-weight: 700; font-size: 0.95rem;">'
@@ -198,13 +222,25 @@ def render_team_roster(team_df: pd.DataFrame) -> None:
 
 
 def render_team_page(team_name: str) -> None:
-    """Render a standalone team profile page."""
+    
+    """Render a standalone team profile page with its own franchise anthem."""
+    team_cfg = get_team_config(team_name)
+    team_anthem = team_cfg.get("anthem")
+    
+    # Trigger the team's custom anthem in sidebar console
+    inject_stadium_audio(
+        anthem_url=team_anthem,
+        anthem_title=f"{team_name.upper()} ANTHEM",
+        subtitle=f"Official Franchise Anthem • {team_cfg.get('slogan', '')}"
+    )
     participants = safe_load(load_participants, PARTICIPANT_COLUMNS)
     fixtures = safe_load(load_fixtures, FIXTURE_COLUMNS)
 
-    live_team_df = participants[
-        participants["Team"].str.casefold() == team_name.casefold()
-    ].copy() if not participants.empty else pd.DataFrame(columns=PARTICIPANT_COLUMNS)
+    live_team_df = (
+        participants[participants["Team"].str.casefold() == team_name.casefold()].copy()
+        if not participants.empty
+        else pd.DataFrame(columns=PARTICIPANT_COLUMNS)
+    )
 
     using_fallback = live_team_df.empty
     team_df = build_fallback_team_data(team_name) if using_fallback else live_team_df

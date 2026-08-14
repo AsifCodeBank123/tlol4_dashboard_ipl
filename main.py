@@ -23,6 +23,7 @@ def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
 def initialize_session_state() -> None:
     """Initialize shared Streamlit session state values."""
     st.session_state.setdefault("last_refresh", None)
+    st.session_state.setdefault("team_pages", {})
 
 
 def render_sidebar(config: dict[str, Any]) -> None:
@@ -64,20 +65,38 @@ def run_app() -> None:
     load_css(CSS_PATH)
     render_sidebar(config)
 
-    team_pages = [
-        st.Page(team["page"], title=team["name"], icon=team["emoji"])
-        for team in config.get("teams", [])
-        if team.get("page")
-    ]
+    # --------------------------------------------------
+    # 1. BUILD INDIVIDUAL TEAM PAGE OBJECTS
+    # --------------------------------------------------
+    team_pages_dict: dict[str, st.Page] = {}
+    team_page_list: list[st.Page] = []
 
+    for team in config.get("teams", []):
+        page_path = team.get("page")
+        if page_path:
+            page_obj = st.Page(
+                page_path,
+                title=team["name"],
+                icon=team.get("emoji", "🛡️"),
+            )
+            team_pages_dict[team["name"]] = page_obj
+            team_page_list.append(page_obj)
+
+    # Store in session state so Home.py can access st.Page objects directly
+    st.session_state["team_pages"] = team_pages_dict
+
+    # --------------------------------------------------
+    # 2. CONFIGURE NAVIGATION HIERARCHY
+    # --------------------------------------------------
     pages = {
-        "Dashboard": [
-            st.Page("pages/Home.py", title="Home", icon="🏠"),
+        "Tournament": [
+            st.Page("pages/Home.py", title="Home", icon="🏟️", default=True),
             st.Page("pages/Fixtures.py", title="Fixtures", icon="📅"),
             st.Page("pages/Leaderboard.py", title="Leaderboard", icon="🏅"),
         ],
-        "Teams": team_pages,
+        "Franchises": team_page_list,
     }
+
     navigation = st.navigation(pages)
     navigation.run()
 
