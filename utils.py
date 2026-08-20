@@ -191,14 +191,40 @@ def get_status_color(status: str, config: dict[str, Any] | None = None) -> str:
     return cfg["data"].get("status_colors", {}).get(status, cfg["theme"]["muted_color"])
 
 
-def get_team_meta(team_name: str, config: dict[str, Any] | None = None) -> dict[str, str]:
-    """Return emoji and colors for a team."""
-    cfg = config or get_config()
-    for team in cfg["teams"]:
-        if team["name"].casefold() == str(team_name).casefold():
-            return team
-    return {"name": str(team_name), "emoji": "🏳️", "color": cfg["theme"]["muted_color"], "accent": "#ffffff"}
+def get_team_meta(team_name: str | None) -> dict:
+    """Fuzzy and case-insensitive lookup for team metadata to avoid 'Unknown'."""
+    config = get_config()
+    default_meta = {
+        "name": str(team_name) if team_name else "Unknown",
+        "color": "#fbbf24",
+        "emoji": "🛡️",
+        "short_name": "TBD"
+    }
 
+    if not team_name or pd.isna(team_name):
+        return default_meta
+
+    clean_input = str(team_name).strip().casefold()
+
+    for team in config.get("teams", []):
+        t_name = team["name"].strip().casefold()
+        t_short = team.get("short_name", "").strip().casefold()
+
+        # Exact match, short name match, or partial fuzzy match
+        if clean_input == t_name or clean_input == t_short:
+            return team
+        
+        # Handle "Royal Challengers of Bhagyashree" vs "Royal Challengers Bhagyashree"
+        if "bhagyashree" in clean_input and "bhagyashree" in t_name:
+            return team
+        if "gayatri" in clean_input and "gayatri" in t_name:
+            return team
+        if "pooja" in clean_input and "pooja" in t_name:
+            return team
+        if "komal" in clean_input and "komal" in t_name:
+            return team
+
+    return default_meta
 
 def get_house_meta(house_name: str, config: dict[str, Any] | None = None) -> dict[str, str]:
     """Backward-compatible alias for old house terminology."""
@@ -268,3 +294,54 @@ def inject_stadium_audio(
     )
 
     st.sidebar.markdown(audio_html, unsafe_allow_html=True)
+
+def is_team_bonus_entry(row) -> bool:
+    """Detect if a row represents team-level bonus points rather than a human player."""
+    participant = str(row.get("Participant", "")).strip().casefold()
+    team = str(row.get("Team", "")).strip().casefold()
+    sport = str(row.get("Sport", "")).strip().casefold()
+    
+    bonus_keywords = ["points", "bonus", "participation", "underdog", "female"]
+    return participant == team or any(kw in sport for kw in bonus_keywords)
+
+
+def render_points_matrix_table(participants_df: pd.DataFrame) -> None:
+    """Generates the exact team breakdown matrix table from the sheet."""
+    if participants_df.empty:
+        return
+
+    # Pivot all rows (both player points and team bonuses) across Sport/Category vs Team
+    matrix = participants_df.pivot_table(
+        index="Sport",
+        columns="Team",
+        values="Points",
+        aggfunc="sum",
+        fill_value=0,
+    )
+
+    config = get_config()
+    team_order = [t["name"] for t in config.get("teams", []) if t["name"] in matrix.columns]
+    if team_order:
+        # Keep non-matching team columns as well if any
+        remaining = [c for c in matrix.columns if c not in team_order]
+        matrix = matrix[team_order + remaining]
+
+    # Calculate total sum per team
+    totals = matrix.sum(axis=0)
+    matrix.loc["Total Points till now"] = totals
+
+    # Format 0 as blank for visual clarity matching the spreadsheet screenshot
+    display_matrix = matrix.astype(int).astype(str).replace("0", "")
+
+    st.markdown(
+        """
+        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 1rem; padding: 1.25rem; margin: 1.5rem 0 1rem 0; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+            <div style="color: #fbbf24; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                📋 Official Team Points Breakdown Matrix
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.dataframe(display_matrix, use_container_width=True)

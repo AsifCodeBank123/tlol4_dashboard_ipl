@@ -236,8 +236,11 @@ def render_team_page(team_name: str) -> None:
     participants = safe_load(load_participants, PARTICIPANT_COLUMNS)
     fixtures = safe_load(load_fixtures, FIXTURE_COLUMNS)
 
+    # ✅ CORRECT:
     live_team_df = (
-        participants[participants["Team"].str.casefold() == team_name.casefold()].copy()
+        participants[
+            participants["Team"].astype(str).str.strip().str.lower() == str(team_name).strip().lower()
+        ].copy()
         if not participants.empty
         else pd.DataFrame(columns=PARTICIPANT_COLUMNS)
     )
