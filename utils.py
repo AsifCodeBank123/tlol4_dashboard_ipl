@@ -397,68 +397,29 @@ def render_soundcloud_player(
     )
 
 def render_top_navigation_bar(current_page: str = "Home") -> None:
-    """Render a horizontal topbar with Home, Fixtures, and Leaderboard switchers."""
+    """Render a clean status & sync bar without duplicate page links."""
     import streamlit as st
     from utils import get_last_refresh_label, refresh_data
 
-    main_pages = st.session_state.get("main_pages", {})
+    col_brand, col_sync, col_ref = st.columns([3.5, 1.8, 0.9])
 
-    st.markdown(
-        """
-        <style>
-        .top-nav-container {
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            border-radius: 0.85rem;
-            padding: 0.5rem 1rem;
-            margin-bottom: 1.25rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    with st.container():
-        col_brand, col_nav1, col_nav2, col_nav3, col_sync, col_ref = st.columns(
-            [2.2, 1.1, 1.1, 1.3, 1.4, 0.9]
+    with col_brand:
+        st.markdown(
+            '<div style="color:#fbbf24; font-weight:900; font-size:1.05rem; padding-top:0.25rem;">'
+            '🏆 TLOL4 ARENA <span style="color:#64748b; font-size:0.85rem; font-weight:600;">| 2026 LIVE DASHBOARD</span>'
+            '</div>',
+            unsafe_allow_html=True,
         )
 
-        with col_brand:
-            st.markdown(
-                '<div style="color:#fbbf24; font-weight:900; font-size:1.05rem; padding-top:0.35rem;">'
-                '🏆 TLOL4 ARENA <span style="color:#64748b; font-size:0.8rem;">| 2026</span>'
-                '</div>',
-                unsafe_allow_html=True,
-            )
+    with col_sync:
+        st.markdown(
+            f'<div style="color:#94a3b8; font-size:0.85rem; text-align:right; padding-top:0.35rem;">'
+            f'🔄 Sync: <strong style="color:#ffffff;">{get_last_refresh_label()}</strong>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
-        with col_nav1:
-            if "Home" in main_pages:
-                st.page_link(main_pages["Home"], label="🏠 Home", use_container_width=True)
-            else:
-                st.page_link("pages/Home.py", label="🏠 Home", use_container_width=True)
-
-        with col_nav2:
-            if "Fixtures" in main_pages:
-                st.page_link(main_pages["Fixtures"], label="📅 Fixtures", use_container_width=True)
-            else:
-                st.page_link("pages/Fixtures.py", label="📅 Fixtures", use_container_width=True)
-
-        with col_nav3:
-            if "Leaderboard" in main_pages:
-                st.page_link(main_pages["Leaderboard"], label="🏅 Leaderboard", use_container_width=True)
-            else:
-                st.page_link("pages/Leaderboard.py", label="🏅 Leaderboard", use_container_width=True)
-
-        with col_sync:
-            st.markdown(
-                f'<div style="color:#94a3b8; font-size:0.75rem; text-align:right; padding-top:0.45rem;">'
-                f'🔄 Sync: <strong style="color:#ffffff;">{get_last_refresh_label()}</strong>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-        with col_ref:
-            if st.button("⚡ Sync", key=f"top_sync_{current_page.lower()}", use_container_width=True):
-                refresh_data()
-                st.rerun()
+    with col_ref:
+        if st.button("⚡ Sync", key=f"top_sync_{current_page.lower()}", use_container_width=True):
+            refresh_data()
+            st.rerun()
