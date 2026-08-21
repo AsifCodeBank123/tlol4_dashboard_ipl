@@ -18,6 +18,7 @@ from utils import (
     load_fixtures,
     load_participants,
     safe_load,
+    render_top_navigation_bar
 )
 
 PARTICIPANT_COLUMNS = ["Participant", "Team", "Sport", "Points", "Matches", "Wins", "Bonus"]
@@ -222,6 +223,7 @@ def render_team_roster(team_df: pd.DataFrame) -> None:
 
 
 def render_team_page(team_name: str) -> None:
+    render_top_navigation_bar(team_name)
     
     """Render a standalone team profile page with its own franchise anthem."""
     team_cfg = get_team_config(team_name)

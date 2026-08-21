@@ -13,6 +13,7 @@ from utils import (
     inject_stadium_audio,
     load_fixtures,
     safe_load,
+    render_top_navigation_bar
 )
 
 FIXTURE_COLUMNS = [
@@ -134,6 +135,7 @@ def render_fixture_list(fixtures: pd.DataFrame, config: dict) -> None:
 
 def main() -> None:
     """Render the fixtures page."""
+    render_top_navigation_bar("Fixtures")
     inject_stadium_audio()
     config = get_config()
 

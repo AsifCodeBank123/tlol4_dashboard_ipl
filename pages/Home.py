@@ -12,10 +12,12 @@ from utils import (
     get_team_meta,
     get_team_scores,
     inject_stadium_audio,
+    render_soundcloud_player,
     load_fixtures,
     load_participants,
     render_points_matrix_table,
     safe_load,
+    render_top_navigation_bar
 )
 
 PARTICIPANT_COLUMNS = ["Participant", "Team", "Sport", "Points", "Matches", "Wins", "Bonus"]
@@ -100,37 +102,184 @@ def render_match_card(row: pd.Series) -> None:
 
 def main() -> None:
     """Render the streamlined championship home arena."""
-    inject_stadium_audio()
+    render_top_navigation_bar("Home")
+    #inject_stadium_audio()
+
+    # Embed your SoundCloud track
+    render_soundcloud_player(
+        track_url="https://soundcloud.com/mak-division/the-antidote",
+        title="TLOL4 ARENA ANTHEM • The Antidote",
+        auto_play=True,  # Set to True if you want it to trigger on load
+        compact=True,     # Compact slim player (80px)
+    )
+
     config = get_config()
     participants = safe_load(load_participants, PARTICIPANT_COLUMNS)
     fixtures = safe_load(load_fixtures, FIXTURE_COLUMNS)
 
     # --------------------------------------------------
-    # HERO BROADCAST BANNER
+    # STADIUM DISCO & LASER HERO BANNER
     # --------------------------------------------------
     st.markdown(
-        f"""
-        <div style="position: relative; padding: 3.5rem 2rem; border-radius: 1.5rem; 
-                    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 58, 138, 0.9)), 
-                                url('https://images.unsplash.com/photo-1540747737956-3787293a9fc4?q=80&w=2560&auto=format&fit=crop'); 
-                    background-size: cover; background-position: center; text-align: center; margin-bottom: 1.5rem; 
-                    border: 2px solid #fbbf24; box-shadow: 0 0 30px rgba(251, 191, 36, 0.25);">
-            <span style="background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #0f172a !important; 
-                         font-size: 0.85rem; font-weight: 900; padding: 0.35rem 1.2rem; border-radius: 2rem; 
-                         text-transform: uppercase; letter-spacing: 2px;">
-                🏟️ OFFICIAL TOURNAMENT HUB
-            </span>
-            <h1 style="margin: 0.85rem 0 0.25rem 0; color: #ffffff !important; font-weight: 900; font-size: 2.8rem; letter-spacing: -1px; text-transform: uppercase;">
-                🏆 {config["app"]["tournament_name"].upper()}
-            </h1>
-            <p style="margin: 0; color: #cbd5e1 !important; font-size: 1.15rem; font-weight: 600;">
-                {config["app"]["tagline"]}
-            </p>
-        </div>
+        """
+        <style>
+        @keyframes discoAura {
+            0% {
+                border-color: #fbbf24;
+                box-shadow: 0 0 25px rgba(251, 191, 36, 0.6), inset 0 0 20px rgba(59, 130, 246, 0.4);
+            }
+            25% {
+                border-color: #ec4899;
+                box-shadow: 0 0 35px rgba(236, 72, 153, 0.8), inset 0 0 25px rgba(251, 191, 36, 0.4);
+            }
+            50% {
+                border-color: #8b5cf6;
+                box-shadow: 0 0 45px rgba(139, 92, 246, 0.9), inset 0 0 30px rgba(16, 185, 129, 0.5);
+            }
+            75% {
+                border-color: #06b6d4;
+                box-shadow: 0 0 35px rgba(6, 182, 212, 0.8), inset 0 0 25px rgba(236, 72, 153, 0.4);
+            }
+            100% {
+                border-color: #fbbf24;
+                box-shadow: 0 0 25px rgba(251, 191, 36, 0.6), inset 0 0 20px rgba(59, 130, 246, 0.4);
+            }
+        }
+
+        @keyframes laserSweep1 {
+            0% { transform: rotate(-35deg) translateX(-120%); opacity: 0.2; }
+            50% { transform: rotate(15deg) translateX(120%); opacity: 0.85; }
+            100% { transform: rotate(-35deg) translateX(-120%); opacity: 0.2; }
+        }
+
+        @keyframes laserSweep2 {
+            0% { transform: rotate(35deg) translateX(120%); opacity: 0.3; }
+            50% { transform: rotate(-20deg) translateX(-120%); opacity: 0.9; }
+            100% { transform: rotate(35deg) translateX(120%); opacity: 0.3; }
+        }
+
+        @keyframes strobePulse {
+            0%, 100% { opacity: 0.3; transform: scale(0.9); }
+            20% { opacity: 1; transform: scale(1.35) rotate(15deg); }
+            40% { opacity: 0.4; transform: scale(0.95); }
+            60% { opacity: 0.95; transform: scale(1.25) rotate(-10deg); }
+            80% { opacity: 0.2; transform: scale(0.85); }
+        }
+
+        @keyframes discoTextShine {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .disco-banner-container {
+            position: relative;
+            padding: 3.5rem 2rem;
+            border-radius: 1.5rem;
+            background: linear-gradient(135deg, rgba(10, 15, 30, 0.95), rgba(20, 10, 40, 0.92)), 
+                        url('https://images.unsplash.com/photo-1540747737956-3787293a9fc4?q=80&w=2560&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            border: 2.5px solid #fbbf24;
+            overflow: hidden;
+            animation: discoAura 3s infinite ease-in-out;
+        }
+
+        .laser-beam-1 {
+            position: absolute;
+            top: -50%;
+            left: -20%;
+            width: 40%;
+            height: 200%;
+            background: linear-gradient(90deg, rgba(236,72,153,0) 0%, rgba(236,72,153,0.4) 50%, rgba(251,191,36,0.6) 100%);
+            pointer-events: none;
+            animation: laserSweep1 4.5s infinite ease-in-out;
+            filter: blur(12px);
+            z-index: 1;
+        }
+
+        .laser-beam-2 {
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 35%;
+            height: 200%;
+            background: linear-gradient(90deg, rgba(6,182,212,0.6) 0%, rgba(139,92,246,0.4) 50%, rgba(6,182,212,0) 100%);
+            pointer-events: none;
+            animation: laserSweep2 5.2s infinite ease-in-out;
+            filter: blur(14px);
+            z-index: 1;
+        }
+
+        .strobe-orb-left {
+            position: absolute;
+            top: -40px;
+            left: -40px;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(236,72,153,0.7) 40%, rgba(0,0,0,0) 75%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: strobePulse 1.8s infinite ease-in-out;
+            filter: blur(8px);
+            z-index: 1;
+        }
+
+        .strobe-orb-right {
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(6,182,212,0.8) 40%, rgba(0,0,0,0) 75%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: strobePulse 2.3s infinite ease-in-out;
+            filter: blur(8px);
+            z-index: 1;
+        }
+
+        .disco-title {
+            margin: 0.85rem 0 0.25rem 0;
+            font-weight: 900;
+            font-size: 3rem;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #ffffff, #fbbf24, #ec4899, #60a5fa, #ffffff);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: discoTextShine 4s linear infinite;
+            filter: drop-shadow(0 0 15px rgba(251,191,36,0.5));
+        }
+        </style>
         """,
         unsafe_allow_html=True,
     )
 
+    banner_html = (
+        f'<div class="disco-banner-container">'
+        f'<div class="laser-beam-1"></div>'
+        f'<div class="laser-beam-2"></div>'
+        f'<div class="strobe-orb-left"></div>'
+        f'<div class="strobe-orb-right"></div>'
+        f'<div style="position: relative; z-index: 2;">'
+        f'<span style="background: linear-gradient(90deg, #ec4899, #fbbf24, #06b6d4); color: #0f172a !important; '
+        f'font-size: 0.85rem; font-weight: 900; padding: 0.4rem 1.4rem; border-radius: 2rem; '
+        f'text-transform: uppercase; letter-spacing: 2.5px; box-shadow: 0 0 20px rgba(236,72,153,0.7);">'
+        f'🏟️ OFFICIAL TOURNAMENT HUB'
+        f'</span>'
+        f'<h1 class="disco-title">🏆 {config["app"]["tournament_name"].upper()}</h1>'
+        f'<p style="margin: 0.4rem 0 0 0; color: #e2e8f0 !important; font-size: 1.2rem; font-weight: 700; '
+        f'letter-spacing: 0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.9);">'
+        f'✨ {config["app"]["tagline"]}'
+        f'</p>'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(banner_html, unsafe_allow_html=True)
     # --------------------------------------------------
     # FRANCHISE QUICK ACCESS SQUAD ROOMS
     # --------------------------------------------------
@@ -216,7 +365,7 @@ def main() -> None:
     # --------------------------------------------------
     # STANDINGS BOARD
     # --------------------------------------------------
-    st.subheader("🏏 IPL Official Cumulative Standings")
+    st.subheader("🏆 Team Cumulative Standings")
     team_scores = get_team_scores(participants)
 
     if not team_scores.empty:

@@ -8,7 +8,7 @@ from typing import Any
 
 import streamlit as st
 
-from utils import apply_theme_variables, load_css, refresh_data
+from utils import apply_theme_variables, load_css
 
 CONFIG_PATH = Path("config.json")
 CSS_PATH = Path("assets/style.css")
@@ -26,48 +26,28 @@ def initialize_session_state() -> None:
     st.session_state.setdefault("team_pages", {})
 
 
-def render_sidebar(config: dict[str, Any]) -> None:
-    """Render sidebar branding, refresh controls, and team links."""
-    branding = config["branding"]
-
-    with st.sidebar:
-        st.markdown(
-            f"""
-            <div class="sidebar-brand">
-                <div class="sidebar-title">{branding['sidebar_title']}</div>
-                <div class="sidebar-subtitle">{branding['sidebar_subtitle']}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if st.button("🔄 Refresh data", use_container_width=True):
-            refresh_data()
-            st.rerun()
-
-        st.markdown("---")
-        st.caption(config["app"]["footer_text"])
-
-
 def run_app() -> None:
-    """Configure and launch the multipage Streamlit application."""
+    """Configure and launch the flat topbar Streamlit navigation."""
     config = load_config()
     app_config = config["app"]
 
     st.set_page_config(
         page_title=app_config["title"],
         page_icon=app_config["page_icon"],
-        layout=app_config.get("layout", "wide"),
+        layout="wide",
+        initial_sidebar_state="collapsed",
     )
 
     initialize_session_state()
     apply_theme_variables(config)
     load_css(CSS_PATH)
-    render_sidebar(config)
 
-    # --------------------------------------------------
-    # 1. BUILD INDIVIDUAL TEAM PAGE OBJECTS
-    # --------------------------------------------------
+    # 1. Primary Tournament Hub Pages
+    home_page = st.Page("pages/Home.py", title="Home", icon="🏠", default=True)
+    fixtures_page = st.Page("pages/Fixtures.py", title="Fixtures", icon="📅")
+    leaderboard_page = st.Page("pages/Leaderboard.py", title="Leaderboard", icon="🏅")
+
+    # 2. Individual Team Pages
     team_pages_dict: dict[str, st.Page] = {}
     team_page_list: list[st.Page] = []
 
@@ -76,28 +56,23 @@ def run_app() -> None:
         if page_path:
             page_obj = st.Page(
                 page_path,
-                title=team["name"],
+                title=team.get("short_name", team["name"]),
                 icon=team.get("emoji", "🛡️"),
             )
             team_pages_dict[team["name"]] = page_obj
             team_page_list.append(page_obj)
 
-    # Store in session state so Home.py can access st.Page objects directly
     st.session_state["team_pages"] = team_pages_dict
-
-    # --------------------------------------------------
-    # 2. CONFIGURE NAVIGATION HIERARCHY
-    # --------------------------------------------------
-    pages = {
-        "Tournament": [
-            st.Page("pages/Home.py", title="Home", icon="🏟️", default=True),
-            st.Page("pages/Fixtures.py", title="Fixtures", icon="📅"),
-            st.Page("pages/Leaderboard.py", title="Leaderboard", icon="🏅"),
-        ],
-        "Franchises": team_page_list,
+    st.session_state["main_pages"] = {
+        "Home": home_page,
+        "Fixtures": fixtures_page,
+        "Leaderboard": leaderboard_page,
     }
 
-    navigation = st.navigation(pages)
+    # 3. Flat List creates horizontal tabs in Streamlit topbar
+    all_pages = [home_page, fixtures_page, leaderboard_page] + team_page_list
+
+    navigation = st.navigation(all_pages, position="top")
     navigation.run()
 
 

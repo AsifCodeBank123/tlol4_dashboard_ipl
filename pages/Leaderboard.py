@@ -13,6 +13,7 @@ from utils import (
     load_participants,
     render_points_matrix_table,
     safe_load,
+    render_top_navigation_bar
 )
 
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
@@ -66,6 +67,7 @@ def render_aggregated_player_card(
 
 
 def main() -> None:
+    render_top_navigation_bar("Leaderboard")
     inject_stadium_audio()
     raw_df = safe_load(load_participants, PARTICIPANT_COLUMNS)
 

@@ -263,37 +263,6 @@ def safe_load(loader: Callable[[], pd.DataFrame], empty_columns: list[str]) -> p
         st.warning(str(exc))
         return pd.DataFrame(columns=empty_columns)
 
-def inject_stadium_audio(
-    anthem_url: str | None = None,
-    anthem_title: str = "STADIUM BROADCAST LIVE",
-    subtitle: str = "Theme Anthem Streaming Autoplay",
-) -> None:
-    """Injects dynamic, team-specific or tournament-wide HTML5 sound console."""
-    import streamlit as st
-
-    # Default general league soundhelix loop if no custom anthem provided
-    audio_source = (
-        anthem_url
-        if anthem_url
-        else "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-    )
-
-    audio_html = (
-        f'<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 58, 138, 0.4)); border: 2px solid #fbbf24; border-radius: 1rem; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem; box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); position: relative; overflow: hidden;">'
-        f'<div style="position: absolute; top: 8px; right: 12px; width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981;"></div>'
-        f'<p style="margin: 0 0 0.25rem 0; color: #fbbf24 !important; font-size: 0.85rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;">🏟️ {anthem_title}</p>'
-        f'<p style="margin: 0 0 0.75rem 0; color: #94a3b8 !important; font-size: 0.75rem; font-weight: 600;">{subtitle}</p>'
-        f'<div style="display: flex; justify-content: center; align-items: center; width: 100%; overflow: hidden; border-radius: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.4rem;">'
-        f'<audio autoplay loop controls style="width: 100%; height: 32px; outline: none;">'
-        f'<source src="{audio_source}" type="audio/mpeg">'
-        f"Your browser does not support the audio element."
-        f"</audio>"
-        f"</div>"
-        f'<div style="margin-top: 0.5rem; color: #64748b !important; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">⚡ Arena Atmosphere Active ⚡</div>'
-        f"</div>"
-    )
-
-    st.sidebar.markdown(audio_html, unsafe_allow_html=True)
 
 def is_team_bonus_entry(row) -> bool:
     """Detect if a row represents team-level bonus points rather than a human player."""
@@ -335,13 +304,161 @@ def render_points_matrix_table(participants_df: pd.DataFrame) -> None:
 
     st.markdown(
         """
-        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 1rem; padding: 1.25rem; margin: 1.5rem 0 1rem 0; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
-            <div style="color: #fbbf24; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
-                📋 Official Team Points Breakdown Matrix
+            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(251, 191, 36, 0.3); 
+            border-radius: 1rem; padding: 1.25rem; margin: 1.5rem 0 1rem 0; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+                <div style="color: #fbbf24; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                📋 Multi-Sport Points Breakdown Matrix
+                </div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.dataframe(display_matrix, use_container_width=True)
+
+
+def inject_stadium_audio(
+    anthem_url: str | None = None,
+    anthem_title: str = "STADIUM BROADCAST",
+    subtitle: str = "Live Track",
+) -> None:
+    """Inject a slim, compact top audio bar without claiming sidebar width."""
+    import streamlit as st
+
+    if isinstance(anthem_url, str) and anthem_url.strip():
+        audio_source = anthem_url.strip()
+    else:
+        audio_source = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+
+    audio_html = (
+        f'<div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(251, 191, 36, 0.4); '
+        f'border-radius: 0.75rem; padding: 0.5rem 1rem; margin-bottom: 1rem; display: flex; '
+        f'align-items: center; justify-content: space-between; gap: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">'
+        f'<div style="display: flex; align-items: center; gap: 0.6rem; min-width: 220px;">'
+        f'<span style="width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981; display: inline-block;"></span>'
+        f'<div>'
+        f'<div style="color: #fbbf24; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">🏟️ {anthem_title}</div>'
+        f'<div style="color: #94a3b8; font-size: 0.7rem;">{subtitle}</div>'
+        f'</div>'
+        f'</div>'
+        f'<div style="flex: 1; max-width: 320px;">'
+        f'<audio autoplay loop controls style="width: 100%; height: 26px; outline: none;">'
+        f'<source src="{audio_source}" type="audio/mpeg">'
+        f'</audio>'
+        f'</div>'
+        f'</div>'
+    )
+    # Render in main container instead of sidebar
+    st.markdown(audio_html, unsafe_allow_html=True)
+
+import urllib.parse
+import streamlit as st
+import streamlit.components.v1 as components
+
+def render_soundcloud_player(
+    track_url: str,
+    title: str = "ARENA AUDIO BROADCAST",
+    auto_play: bool = False,
+    compact: bool = True,
+) -> None:
+    """Renders an embedded SoundCloud HTML5 player widget."""
+    encoded_url = urllib.parse.quote(track_url, safe="")
+    height = 80 if compact else 166
+    
+    embed_url = (
+        f"https://w.soundcloud.com/player/?url={encoded_url}"
+        f"&color=%23fbbf24"
+        f"&auto_play={'true' if auto_play else 'false'}"
+        f"&hide_related=true"
+        f"&show_comments=false"
+        f"&show_user=true"
+        f"&show_reposts=false"
+        f"&show_teaser=false"
+        f"&visual={'false' if compact else 'true'}"
+    )
+
+    st.markdown(
+        f"""
+        <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(251, 191, 36, 0.4); 
+                    border-radius: 0.75rem; padding: 0.5rem 0.85rem; margin-bottom: 1rem; 
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <div style="color: #fbbf24; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+                <span style="width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981; display: inline-block;"></span>
+                🎵 {title}
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.dataframe(display_matrix, use_container_width=True)
+    components.html(
+        f'<iframe width="100%" height="{height}" scrolling="no" frameborder="no" allow="autoplay" src="{embed_url}"></iframe>',
+        height=height + 10,
+    )
+
+def render_top_navigation_bar(current_page: str = "Home") -> None:
+    """Render a horizontal topbar with Home, Fixtures, and Leaderboard switchers."""
+    import streamlit as st
+    from utils import get_last_refresh_label, refresh_data
+
+    main_pages = st.session_state.get("main_pages", {})
+
+    st.markdown(
+        """
+        <style>
+        .top-nav-container {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 0.85rem;
+            padding: 0.5rem 1rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.container():
+        col_brand, col_nav1, col_nav2, col_nav3, col_sync, col_ref = st.columns(
+            [2.2, 1.1, 1.1, 1.3, 1.4, 0.9]
+        )
+
+        with col_brand:
+            st.markdown(
+                '<div style="color:#fbbf24; font-weight:900; font-size:1.05rem; padding-top:0.35rem;">'
+                '🏆 TLOL4 ARENA <span style="color:#64748b; font-size:0.8rem;">| 2026</span>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        with col_nav1:
+            if "Home" in main_pages:
+                st.page_link(main_pages["Home"], label="🏠 Home", use_container_width=True)
+            else:
+                st.page_link("pages/Home.py", label="🏠 Home", use_container_width=True)
+
+        with col_nav2:
+            if "Fixtures" in main_pages:
+                st.page_link(main_pages["Fixtures"], label="📅 Fixtures", use_container_width=True)
+            else:
+                st.page_link("pages/Fixtures.py", label="📅 Fixtures", use_container_width=True)
+
+        with col_nav3:
+            if "Leaderboard" in main_pages:
+                st.page_link(main_pages["Leaderboard"], label="🏅 Leaderboard", use_container_width=True)
+            else:
+                st.page_link("pages/Leaderboard.py", label="🏅 Leaderboard", use_container_width=True)
+
+        with col_sync:
+            st.markdown(
+                f'<div style="color:#94a3b8; font-size:0.75rem; text-align:right; padding-top:0.45rem;">'
+                f'🔄 Sync: <strong style="color:#ffffff;">{get_last_refresh_label()}</strong>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        with col_ref:
+            if st.button("⚡ Sync", key=f"top_sync_{current_page.lower()}", use_container_width=True):
+                refresh_data()
+                st.rerun()
