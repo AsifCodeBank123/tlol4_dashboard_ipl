@@ -25,7 +25,7 @@ PARTICIPANT_COLUMNS = ["Participant", "Team", "Sport", "Points", "Matches", "Win
 FIXTURE_COLUMNS = [
     "Sport",
     "Date",
-    "Time",
+    "Stage",
     "Participant 1",
     "Team 1",
     "Participant 2",
@@ -189,7 +189,7 @@ def render_team_fixtures(fixtures: pd.DataFrame, team_name: str) -> None:
 
     st.dataframe(
         team_fixtures[
-            ["Sport", "Date", "Time", "Participant 1", "Team 1", "Participant 2", "Team 2", "Venue", "Status"]
+            ["Sport", "Date", "Stage", "Participant 1", "Team 1", "Participant 2", "Team 2", "Venue", "Status"]
         ],
         use_container_width=True,
         hide_index=True,

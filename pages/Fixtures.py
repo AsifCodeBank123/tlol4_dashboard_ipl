@@ -19,7 +19,7 @@ from utils import (
 FIXTURE_COLUMNS = [
     "Sport",
     "Date",
-    "Time",
+    "Stage",
     "Participant 1",
     "Team 1",
     "Participant 2",
@@ -93,7 +93,7 @@ def render_fixture_card(row, config) -> None:
 
     sport = str(row.get("Sport", "Sport")).strip()
     date = str(row.get("Date", "TBD")).strip()
-    time = str(row.get("Time", "TBD")).strip()
+    stage = str(row.get("Stage", "TBD")).strip()
     venue = str(row.get("Venue", "Arena")).strip()
     match_no = str(row.get("Match", "")).strip()
 
@@ -106,7 +106,7 @@ def render_fixture_card(row, config) -> None:
         f'<span class="sport-badge" style="color: #ffffff !important; font-weight: 800; background: linear-gradient(90deg, #1e40af, #3b82f6); padding: 0.35rem 0.85rem; border-radius: 2rem; font-size: 0.8rem; border: 1px solid #60a5fa;">⚡ {icon} {sport}</span>'
         f'<span class="match-badge" style="color: #fbbf24 !important; font-size: 0.85rem; font-weight: 700; text-shadow: 0 0 8px rgba(251,191,36,0.3);">{match_no}</span>'
         f'</div>'
-        f'<div class="card-label" style="color: #94a3b8 !important; font-size: 0.9rem; font-weight: 600; margin-bottom: 1rem;">📅 {date} • 🕒 {time}</div>'
+        f'<div class="card-label" style="color: #94a3b8 !important; font-size: 0.9rem; font-weight: 600; margin-bottom: 1rem;">📅 {date} • 🕒 {stage}</div>'
         f'<div class="participant-section" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0;">'
         f'<div class="participant-card" style="flex: 1; padding: 0.85rem; border-radius: 0.6rem; background: rgba(255,255,255,0.03); border-left: 5px solid {team1_meta["color"]};">'
         f'<div class="participant-name" style="color: #ffffff !important; font-weight: 800; font-size: 1.1rem;">{participant1}</div>'

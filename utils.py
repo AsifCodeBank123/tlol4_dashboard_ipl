@@ -116,7 +116,7 @@ def _clean_fixtures(df: pd.DataFrame) -> pd.DataFrame:
     expected_columns = [
         "Sport",
         "Date",
-        "Time",
+        "Stage",
         "Participant 1",
         "Team 1",
         "Participant 2",
@@ -423,3 +423,145 @@ def render_top_navigation_bar(current_page: str = "Home") -> None:
         if st.button("⚡ Sync", key=f"top_sync_{current_page.lower()}", use_container_width=True):
             refresh_data()
             st.rerun()
+
+def render_tournament_bracket_for_sport(sport: str, fixtures_df: pd.DataFrame) -> None:
+    """Renders sport-specific tournament progression (Knockout Tree or Group + Knockout)."""
+    if fixtures_df.empty:
+        st.info(f"No match fixtures recorded for {sport}.")
+        return
+
+    sport_matches = fixtures_df[
+        fixtures_df["Sport"].astype(str).str.strip().str.lower() == str(sport).strip().lower()
+    ].copy()
+
+    if sport_matches.empty:
+        st.info(f"No scheduled matches found for {sport}.")
+        return
+
+    def get_stage_str(row: pd.Series) -> str:
+        val = row.get("Stage")
+        if pd.isna(val) or not str(val).strip():
+            val = row.get("Time", "")
+        return str(val).strip()
+
+    def render_team_slot(participant: str, team_name: str) -> str:
+        meta = get_team_meta(team_name)
+        p_label = participant if str(participant).strip() else "TBD"
+        return (
+            f'<div style="display: flex; align-items: center; justify-content: space-between; '
+            f'padding: 0.35rem 0.55rem; border-radius: 0.4rem; margin: 0.2rem 0; '
+            f'background: rgba(255, 255, 255, 0.04); border-left: 4px solid {meta["color"]};">'
+            f'<div>'
+            f'<div style="color: #ffffff; font-weight: 800; font-size: 0.85rem;">{p_label}</div>'
+            f'<div style="color: #94a3b8; font-size: 0.7rem;">{meta["emoji"]} {meta["short_name"]}</div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    def render_match_box(match_row: pd.Series, is_championship: bool = False) -> str:
+        border_style = "2px solid #fbbf24; box-shadow: 0 0 15px rgba(251,191,36,0.3);" if is_championship else "1px solid rgba(255,255,255,0.12);"
+        bg_style = "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,58,138,0.85));" if is_championship else "rgba(15,23,42,0.88);"
+        
+        return (
+            f'<div style="background: {bg_style} border: {border_style} border-radius: 0.65rem; '
+            f'padding: 0.65rem; margin-bottom: 0.6rem; min-width: 220px;">'
+            f'<div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #fbbf24; font-weight: 700; margin-bottom: 0.25rem;">'
+            f'<span>{match_row.get("Match", "Match")}</span>'
+            f'<span style="color: #94a3b8;">📍 {match_row.get("Venue", "Arena")}</span>'
+            f'</div>'
+            f'{render_team_slot(str(match_row.get("Participant 1", "TBD")), str(match_row.get("Team 1", "TBD")))}'
+            f'{render_team_slot(str(match_row.get("Participant 2", "TBD")), str(match_row.get("Team 2", "TBD")))}'
+            f'</div>'
+        )
+
+    # -------------------------------------------------------------
+    # FORMAT 1: TABLE TENNIS (4 Groups -> Quarters -> Semis -> Final)
+    # -------------------------------------------------------------
+    if "table tennis" in str(sport).strip().lower():
+        st.markdown(
+            '<div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(251,191,36,0.3); '
+            'border-radius: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #fbbf24; font-weight: 800;">'
+            '🏓 Table Tennis Championship Progression (4 Groups • Top 2 Qualify for Quarters)'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        tt_tabs = st.tabs(["📊 Group Stage (A, B, C, D)", "🏆 Knockout Finals (QF ➔ SF ➔ F01)"])
+        
+        with tt_tabs[0]:
+            g_cols = st.columns(4)
+            group_codes = [("Group A", "GA"), ("Group B", "GB"), ("Group C", "GC"), ("Group D", "GD")]
+            for idx, (g_title, g_prefix) in enumerate(group_codes):
+                with g_cols[idx]:
+                    st.markdown(f"**{g_title}**")
+                    g_matches = sport_matches[sport_matches["Match"].astype(str).str.startswith(g_prefix)]
+                    if not g_matches.empty:
+                        for _, m in g_matches.iterrows():
+                            st.markdown(render_match_box(m), unsafe_allow_html=True)
+                    else:
+                        st.caption(f"No {g_prefix} matches found.")
+
+        with tt_tabs[1]:
+            qf_matches = sport_matches[sport_matches["Match"].astype(str).str.startswith("QF")]
+            sf_matches = sport_matches[sport_matches["Match"].astype(str).str.startswith("SF")]
+            f_matches = sport_matches[sport_matches["Match"].astype(str).str.startswith("F")]
+
+            k_col1, k_col2, k_col3 = st.columns([1.2, 1.2, 1.3])
+            with k_col1:
+                st.markdown("**⚔️ Quarter Finals (QF01-04)**")
+                for _, m in qf_matches.iterrows():
+                    st.markdown(render_match_box(m), unsafe_allow_html=True)
+
+            with k_col2:
+                st.markdown("**🔥 Semi Finals (SF01-02)**")
+                for _, m in sf_matches.iterrows():
+                    st.markdown(render_match_box(m), unsafe_allow_html=True)
+
+            with k_col3:
+                st.markdown("**🏆 Grand Final (F01)**")
+                for _, m in f_matches.iterrows():
+                    st.markdown(render_match_box(m, is_championship=True), unsafe_allow_html=True)
+        return
+
+    # -------------------------------------------------------------
+    # FORMAT 2: 5-STAGE KNOCKOUT (Carrom, Foosball, Badminton)
+    # Round 1 -> Round 2 -> Quarter Final -> Semi Final -> Final
+    # -------------------------------------------------------------
+    r1 = sport_matches[sport_matches.apply(get_stage_str, axis=1).str.contains("Round 1|R1", case=False, na=False)]
+    r2 = sport_matches[sport_matches.apply(get_stage_str, axis=1).str.contains("Round 2|R2", case=False, na=False)]
+    qf = sport_matches[sport_matches.apply(get_stage_str, axis=1).str.contains("Quarter|QF", case=False, na=False)]
+    sf = sport_matches[sport_matches.apply(get_stage_str, axis=1).str.contains("Semi|SF", case=False, na=False)]
+    fn = sport_matches[
+        sport_matches.apply(get_stage_str, axis=1).str.contains("Final|1st|Gold", case=False, na=False)
+        & ~sport_matches.apply(get_stage_str, axis=1).str.contains("Semi|Quarter|3rd", case=False, na=False)
+    ]
+
+    cols = st.columns(5)
+    stages_data = [
+        ("Round 1", r1),
+        ("Round 2", r2),
+        ("Quarter Final", qf),
+        ("Semi Final", sf),
+        ("🏆 Final", fn),
+    ]
+
+    for idx, (stage_label, stage_df) in enumerate(stages_data):
+        with cols[idx]:
+            st.markdown(
+                f'<div style="text-align:center; font-size:0.75rem; font-weight:800; color:#fbbf24; '
+                f'background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.25); '
+                f'border-radius:0.4rem; padding:0.25rem; margin-bottom:0.5rem; text-transform:uppercase;">'
+                f'{stage_label}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if not stage_df.empty:
+                for _, m in stage_df.iterrows():
+                    is_champ = (stage_label == "🏆 Final")
+                    st.markdown(render_match_box(m, is_championship=is_champ), unsafe_allow_html=True)
+            else:
+                st.markdown(
+                    '<div style="color:#64748b; font-size:0.75rem; text-align:center; padding:0.75rem; '
+                    'background:rgba(255,255,255,0.02); border-radius:0.5rem;">Awaiting Lineup</div>',
+                    unsafe_allow_html=True
+                )

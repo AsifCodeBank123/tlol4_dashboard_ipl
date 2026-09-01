@@ -11,20 +11,20 @@ from utils import (
     get_sport_icon,
     get_team_meta,
     get_team_scores,
-    inject_stadium_audio,
-    render_soundcloud_player,
     load_fixtures,
     load_participants,
     render_points_matrix_table,
+    render_soundcloud_player,
+    render_top_navigation_bar,
+    render_tournament_bracket_for_sport,
     safe_load,
-    render_top_navigation_bar
 )
 
 PARTICIPANT_COLUMNS = ["Participant", "Team", "Sport", "Points", "Matches", "Wins", "Bonus"]
 FIXTURE_COLUMNS = [
     "Sport",
     "Date",
-    "Time",
+    "Stage",
     "Participant 1",
     "Team 1",
     "Participant 2",
@@ -74,7 +74,7 @@ def render_match_card(row: pd.Series) -> None:
     match_label = str(row.get("Match", "Match")).strip()
     venue = str(row.get("Venue", "Arena")).strip()
     date_str = str(row.get("Date", "TBD")).strip()
-    time_str = str(row.get("Time", "TBD")).strip()
+    stage_str = str(row.get("Stage") or row.get("Time") or "TBD").strip()
 
     html = (
         f'<div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); '
@@ -83,7 +83,7 @@ def render_match_card(row: pd.Series) -> None:
         f'<span style="color: #ffffff; font-weight: 800; font-size: 0.8rem; background: linear-gradient(90deg, #1e40af, #3b82f6); padding: 0.3rem 0.8rem; border-radius: 1rem;">⚡ {icon} {row.get("Sport", "Match")}</span>'
         f'<span style="color: #fbbf24; font-size: 0.8rem; font-weight: 800;">{match_label}</span>'
         f'</div>'
-        f'<div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.75rem;">📅 {date_str} • 🕒 {time_str} • 📍 {venue}</div>'
+        f'<div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.75rem;">📅 {date_str} • 🏆 {stage_str} • 📍 {venue}</div>'
         f'<div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">'
         f'<div style="flex: 1; padding: 0.75rem; border-radius: 0.5rem; background: rgba(255,255,255,0.03); border-left: 4px solid {team1["color"]};">'
         f'<div style="color: #ffffff; font-weight: 800; font-size: 1.05rem;">{p1}</div>'
@@ -103,14 +103,12 @@ def render_match_card(row: pd.Series) -> None:
 def main() -> None:
     """Render the streamlined championship home arena."""
     render_top_navigation_bar("Home")
-    #inject_stadium_audio()
 
-    # Embed your SoundCloud track
     render_soundcloud_player(
         track_url="https://soundcloud.com/mak-division/the-antidote",
         title="TLOL4 ARENA ANTHEM • The Antidote",
-        auto_play=True,  # Set to True if you want it to trigger on load
-        compact=True,     # Compact slim player (80px)
+        auto_play=True,
+        compact=True,
     )
 
     config = get_config()
@@ -276,53 +274,6 @@ def main() -> None:
 
     st.markdown("---")
 
-    # # --------------------------------------------------
-    # # LIVE KNOCKOUT FINALS ARENA BRACKET (BLEED-PROOF)
-    # # --------------------------------------------------
-    # finals_bracket_html = (
-    #     '<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 58, 138, 0.7)); '
-    #     'border: 2px solid #fbbf24; border-radius: 1.25rem; padding: 1.5rem; margin-bottom: 2rem; '
-    #     'box-shadow: 0 10px 30px rgba(0,0,0,0.5);">'
-    #     '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">'
-    #     '<span style="color: #fbbf24; font-size: 1.05rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">'
-    #     '🎮 OLD SCHOOL GAMES: FINALS BRACKET & STAKES'
-    #     '</span>'
-    #     '<span style="background: #dc2626; color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 800;">'
-    #     'LIVE ROUND 2'
-    #     '</span>'
-    #     '</div>'
-    #     '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">'
-    #     '<div style="background: rgba(255,255,255,0.03); border: 1px solid #fbbf24; border-radius: 0.85rem; padding: 1rem; text-align: center;">'
-    #     '<div style="color: #fbbf24; font-size: 0.85rem; font-weight: 900; margin-bottom: 0.25rem;">'
-    #     '🏆 GRAND CHAMPIONSHIP FINAL'
-    #     '</div>'
-    #     '<div style="color: #ffffff; font-size: 1.1rem; font-weight: 800; margin: 0.4rem 0;">'
-    #     '👑 Royal Challengers of Bhagyashree <br>'
-    #     '<span style="color: #fbbf24; font-size: 0.85rem; font-style: italic;">VS</span><br>'
-    #     '⚔️ Komal Knight Riders'
-    #     '</div>'
-    #     '<div style="background: rgba(251, 191, 36, 0.15); border-radius: 0.4rem; padding: 0.35rem; color: #fde68a; font-size: 0.75rem; font-weight: 700; margin-top: 0.5rem;">'
-    #     '🥇 Winner: 1000 PTS • 🥈 Runner-Up: 500 PTS'
-    #     '</div>'
-    #     '</div>'
-    #     '<div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.15); border-radius: 0.85rem; padding: 1rem; text-align: center;">'
-    #     '<div style="color: #94a3b8; font-size: 0.85rem; font-weight: 900; margin-bottom: 0.25rem;">'
-    #     '🥉 3RD PLACE PLAYOFF'
-    #     '</div>'
-    #     '<div style="color: #ffffff; font-size: 1.1rem; font-weight: 800; margin: 0.4rem 0;">'
-    #     '🌀 Gayatri Indians <br>'
-    #     '<span style="color: #94a3b8; font-size: 0.85rem; font-style: italic;">VS</span><br>'
-    #     '🦁 Pooja Super Kings'
-    #     '</div>'
-    #     '<div style="background: rgba(255, 255, 255, 0.05); border-radius: 0.4rem; padding: 0.35rem; color: #cbd5e1; font-size: 0.75rem; font-weight: 700; margin-top: 0.5rem;">'
-    #     '🥉 Winner: 250 PTS • 4th Place: 0 PTS'
-    #     '</div>'
-    #     '</div>'
-    #     '</div>'
-    #     '</div>'
-    # )
-    # st.markdown(finals_bracket_html, unsafe_allow_html=True)
-
     # --------------------------------------------------
     # STANDINGS BOARD
     # --------------------------------------------------
@@ -340,6 +291,33 @@ def main() -> None:
     # --------------------------------------------------
     if not participants.empty:
         render_points_matrix_table(participants)
+
+    st.markdown("---")
+
+    # --------------------------------------------------
+    # SPORT-WISE PLAYOFF & FINALS BRACKET (COLLAPSIBLE)
+    # --------------------------------------------------
+    TARGET_BRACKET_SPORTS = ["Carrom", "Foosball", "Badminton", "Table Tennis"]
+
+    with st.expander("🎮 Live Sport Knockout Brackets (Click to Expand)", expanded=False):
+        st.caption("Select a sport below to inspect its tournament bracket and playoff progression.")
+
+        if not fixtures.empty and "Sport" in fixtures.columns:
+            available_target_sports = [
+                s for s in TARGET_BRACKET_SPORTS
+                if any(fixtures["Sport"].astype(str).str.strip().str.lower() == s.lower())
+            ]
+
+            display_sports = available_target_sports if available_target_sports else TARGET_BRACKET_SPORTS
+
+            tab_labels = [f"{get_sport_icon(sport)} {sport}" for sport in display_sports]
+            sport_tabs = st.tabs(tab_labels)
+
+            for tab, sport in zip(sport_tabs, display_sports):
+                with tab:
+                    render_tournament_bracket_for_sport(sport, fixtures)
+        else:
+            st.info("No fixtures data available to generate brackets.")
 
     st.markdown("---")
 
