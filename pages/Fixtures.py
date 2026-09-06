@@ -10,7 +10,6 @@ from utils import (
     get_sport_icon,
     get_status_color,
     get_team_meta,
-    inject_stadium_audio,
     load_fixtures,
     safe_load,
     render_top_navigation_bar
@@ -136,7 +135,6 @@ def render_fixture_list(fixtures: pd.DataFrame, config: dict) -> None:
 def main() -> None:
     """Render the fixtures page."""
     render_top_navigation_bar("Fixtures")
-    inject_stadium_audio()
     config = get_config()
 
     fixtures = safe_load(load_fixtures, FIXTURE_COLUMNS)

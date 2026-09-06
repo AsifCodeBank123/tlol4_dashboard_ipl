@@ -1,4 +1,4 @@
-"""Home page for the TLOL4 Sports League Dashboard."""
+"""Championship Arena Home page for the TLOL4 Sports League Dashboard."""
 
 from __future__ import annotations
 
@@ -14,13 +14,23 @@ from utils import (
     load_fixtures,
     load_participants,
     render_points_matrix_table,
-    render_soundcloud_player,
+    render_arena_anthem,
     render_top_navigation_bar,
     render_tournament_bracket_for_sport,
     safe_load,
 )
 
-PARTICIPANT_COLUMNS = ["Participant", "Team", "Sport", "Points", "Matches", "Wins", "Bonus"]
+PARTICIPANT_COLUMNS = [
+    "Participant",
+    "Team",
+    "Sport",
+    "Points",
+    "Matches",
+    "Wins",
+    "Bonus",
+    "Participation Points",
+]
+
 FIXTURE_COLUMNS = [
     "Sport",
     "Date",
@@ -35,34 +45,224 @@ FIXTURE_COLUMNS = [
 ]
 
 
-def render_standings_card(team_name: str, points: float, rank: int) -> None:
-    """Render an IPL-styled standings card with franchise branding."""
-    meta = get_team_meta(team_name)
-    rank_badge = f"RANK #{rank}" if rank > 1 else "👑 LEAGUE LEADER"
-    border_accent = meta["color"] if rank > 1 else "#fbbf24"
+def render_home_styles() -> None:
+    """Inject high-energy EDM laser festival and strobe lighting CSS."""
+    st.markdown(
+        """
+        <style>
+        /* 1. Fast EDM Bass Strobe & Border Rhythm */
+        @keyframes edmBassStrobe {
+            0% {
+                border-color: #fbbf24;
+                box-shadow: 0 0 25px rgba(251, 191, 36, 0.6), inset 0 0 20px rgba(59, 130, 246, 0.35);
+            }
+            25% {
+                border-color: #3b82f6;
+                box-shadow: 0 0 35px rgba(59, 130, 246, 0.7), inset 0 0 30px rgba(251, 191, 36, 0.4);
+            }
+            50% {
+                border-color: #ec4899;
+                box-shadow: 0 0 40px rgba(236, 72, 153, 0.6), inset 0 0 25px rgba(59, 130, 246, 0.4);
+            }
+            75% {
+                border-color: #10b981;
+                box-shadow: 0 0 35px rgba(16, 185, 129, 0.6), inset 0 0 20px rgba(251, 191, 36, 0.35);
+            }
+            100% {
+                border-color: #fbbf24;
+                box-shadow: 0 0 25px rgba(251, 191, 36, 0.6), inset 0 0 20px rgba(59, 130, 246, 0.35);
+            }
+        }
 
-    html = (
-        f'<div class="team-card" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); '
-        f'border-top: 4px solid {border_accent}; border-left: 1px solid rgba(255,255,255,0.1); '
-        f'border-right: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); '
-        f'border-radius: 1rem; padding: 1.25rem; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.4); '
-        f'margin-bottom: 1rem; transition: transform 0.3s ease;">'
-        f'<div style="font-size: 2.2rem; filter: drop-shadow(0 0 10px {meta["color"]});">{meta["emoji"]}</div>'
-        f'<div style="color: #ffffff; font-size: 1.1rem; font-weight: 800; margin: 0.25rem 0;">{team_name}</div>'
-        f'<div style="color: #ffffff; font-size: 1.8rem; font-weight: 900; margin-top: 0.2rem;">'
-        f'{format_points(points)} <span style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">PTS</span>'
+        /* 2. Criss-Cross EDM Laser Beams */
+        @keyframes laserSweepLeft {
+            0% { transform: translateX(-100%) rotate(35deg); opacity: 0; }
+            20% { opacity: 0.65; }
+            50% { transform: translateX(100%) rotate(35deg); opacity: 0.7; }
+            80% { opacity: 0.65; }
+            100% { transform: translateX(200%) rotate(35deg); opacity: 0; }
+        }
+
+        @keyframes laserSweepRight {
+            0% { transform: translateX(200%) rotate(-35deg); opacity: 0; }
+            20% { opacity: 0.65; }
+            50% { transform: translateX(0%) rotate(-35deg); opacity: 0.7; }
+            80% { opacity: 0.65; }
+            100% { transform: translateX(-150%) rotate(-35deg); opacity: 0; }
+        }
+
+        /* 3. Fast Subwoofer Bass Orb Pumps */
+        @keyframes edmSubOrb {
+            0%, 100% { transform: scale(0.85); opacity: 0.3; filter: blur(12px); }
+            50% { transform: scale(1.35); opacity: 0.85; filter: blur(6px); }
+        }
+
+        /* 4. Neon Equalizer Visualizer Bars */
+        @keyframes eqBounce1 { 0%, 100% { height: 12px; } 50% { height: 48px; } }
+        @keyframes eqBounce2 { 0%, 100% { height: 36px; } 50% { height: 14px; } }
+        @keyframes eqBounce3 { 0%, 100% { height: 22px; } 50% { height: 55px; } }
+        @keyframes eqBounce4 { 0%, 100% { height: 46px; } 50% { height: 18px; } }
+
+        .edm-arena-hero {
+            position: relative;
+            padding: 3.5rem 2rem;
+            border-radius: 1.5rem;
+            background: radial-gradient(circle at center, rgba(30, 58, 138, 0.45) 0%, rgba(15, 23, 42, 0.96) 80%),
+                        url('https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1280&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            margin-bottom: 2rem;
+            border: 2.5px solid #fbbf24;
+            overflow: hidden;
+            animation: edmBassStrobe 1.87s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .laser-beam-1 {
+            position: absolute;
+            top: -100%;
+            left: 0;
+            width: 30%;
+            height: 300%;
+            background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.4) 50%, rgba(251, 191, 36, 0.6) 55%, transparent 100%);
+            pointer-events: none;
+            animation: laserSweepLeft 3.2s infinite ease-in-out;
+            filter: blur(8px);
+            z-index: 1;
+        }
+
+        .laser-beam-2 {
+            position: absolute;
+            top: -100%;
+            right: 0;
+            width: 30%;
+            height: 300%;
+            background: linear-gradient(90deg, transparent 0%, rgba(236, 72, 153, 0.45) 50%, rgba(59, 130, 246, 0.6) 55%, transparent 100%);
+            pointer-events: none;
+            animation: laserSweepRight 2.6s infinite ease-in-out 0.4s;
+            filter: blur(8px);
+            z-index: 1;
+        }
+
+        .sub-orb-cyan {
+            position: absolute;
+            top: -40px;
+            left: -40px;
+            width: 230px;
+            height: 230px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: edmSubOrb 0.94s infinite ease-in-out;
+            z-index: 1;
+        }
+
+        .sub-orb-gold {
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 230px;
+            height: 230px;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: edmSubOrb 0.94s infinite ease-in-out 0.47s;
+            z-index: 1;
+        }
+
+        .eq-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 6px;
+            height: 55px;
+            margin-top: 1.2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .eq-bar {
+            width: 6px;
+            border-radius: 3px;
+            background: linear-gradient(180deg, #fbbf24 0%, #3b82f6 100%);
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+        }
+
+        .team-hub-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(14px);
+            border-radius: 1rem;
+            padding: 1.15rem 1rem;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            margin-bottom: 0.5rem;
+        }
+        .team-hub-card:hover { transform: translateY(-4px); }
+
+        .standings-deck-card {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(16px);
+            border-radius: 1.15rem;
+            padding: 1.35rem 1rem;
+            text-align: center;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            margin-bottom: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.25s ease;
+        }
+        .standings-deck-card:hover { transform: translateY(-4px); }
+
+        .match-plate-container {
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 1.15rem;
+            padding: 1.3rem;
+            margin-bottom: 1.15rem;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .match-plate-container:hover {
+            border-color: rgba(251, 191, 36, 0.5);
+            transform: translateY(-3px);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_standings_card(team_name: str, points: float, rank: int) -> None:
+    """Render an IPL-styled championship standings card."""
+    meta = get_team_meta(team_name)
+    is_leader = rank == 1
+
+    if is_leader:
+        border_style = "border: 2px solid #fbbf24; border-top: 6px solid #fbbf24; box-shadow: 0 0 25px rgba(251, 191, 36, 0.4);"
+        badge_html = '<span style="background: linear-gradient(90deg, #d97706, #fbbf24); color: #000000; font-weight: 900; font-size: 0.75rem; padding: 0.25rem 0.8rem; border-radius: 1rem; letter-spacing: 1px;">👑 LEAGUE LEADER</span>'
+    else:
+        border_style = f"border: 1px solid rgba(255, 255, 255, 0.12); border-top: 5px solid {meta['color']};"
+        badge_html = f'<span style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; font-weight: 800; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 1rem; letter-spacing: 1px;">RANK #{rank}</span>'
+
+    card_html = (
+        f'<div class="standings-deck-card" style="{border_style}">'
+        f'<div style="font-size: 2.35rem; margin-bottom: 0.3rem; filter: drop-shadow(0 0 10px {meta["color"]});">{meta["emoji"]}</div>'
+        f'<div style="color: #ffffff; font-size: 1.15rem; font-weight: 900; letter-spacing: -0.3px;">{team_name}</div>'
+        f'<div style="color: #fbbf24; font-size: 1.95rem; font-weight: 900; margin: 0.25rem 0; letter-spacing: -0.5px;">'
+        f'{format_points(points)} <span style="font-size: 0.85rem; color: #64748b; font-weight: 700;">PTS</span>'
         f'</div>'
-        f'<div style="color: {border_accent}; font-size: 0.8rem; font-weight: 800; letter-spacing: 1px; margin-top: 0.4rem; text-transform: uppercase;">'
-        f'{rank_badge}'
-        f'</div>'
+        f'<div style="margin-top: 0.6rem;">{badge_html}</div>'
         f'</div>'
     )
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown(card_html, unsafe_allow_html=True)
 
 
 def render_match_card(row: pd.Series) -> None:
-    """Render an upcoming match card with clean participant cards."""
-    icon = get_sport_icon(row.get("Sport", "Sport"))
+    """Render a television broadcast-style head-to-head encounter card."""
+    sport_label = str(row.get("Sport", "Match")).strip()
+    icon = get_sport_icon(sport_label)
+
     t1_name = str(row.get("Team 1") or row.get("House 1") or "Unknown").strip()
     t2_name = str(row.get("Team 2") or row.get("House 2") or "Unknown").strip()
 
@@ -76,39 +276,44 @@ def render_match_card(row: pd.Series) -> None:
     date_str = str(row.get("Date", "TBD")).strip()
     stage_str = str(row.get("Stage") or row.get("Time") or "TBD").strip()
 
-    html = (
-        f'<div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); '
-        f'border-radius: 1rem; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 8px 20px rgba(0,0,0,0.3);">'
+    plate_html = (
+        f'<div class="match-plate-container">'
         f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">'
-        f'<span style="color: #ffffff; font-weight: 800; font-size: 0.8rem; background: linear-gradient(90deg, #1e40af, #3b82f6); padding: 0.3rem 0.8rem; border-radius: 1rem;">⚡ {icon} {row.get("Sport", "Match")}</span>'
-        f'<span style="color: #fbbf24; font-size: 0.8rem; font-weight: 800;">{match_label}</span>'
+        f'<span style="color: #ffffff; font-weight: 800; font-size: 0.8rem; background: linear-gradient(90deg, #1e40af, #3b82f6); padding: 0.3rem 0.85rem; border-radius: 1rem; letter-spacing: 0.5px;">'
+        f'⚡ {icon} {sport_label}'
+        f'</span>'
+        f'<span style="color: #fbbf24; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.5px;">{match_label}</span>'
         f'</div>'
-        f'<div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.75rem;">📅 {date_str} • 🏆 {stage_str} • 📍 {venue}</div>'
+        f'<div style="color: #94a3b8; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.85rem;">'
+        f'📅 {date_str} &nbsp;•&nbsp; 🏆 {stage_str} &nbsp;•&nbsp; 📍 {venue}'
+        f'</div>'
         f'<div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">'
-        f'<div style="flex: 1; padding: 0.75rem; border-radius: 0.5rem; background: rgba(255,255,255,0.03); border-left: 4px solid {team1["color"]};">'
-        f'<div style="color: #ffffff; font-weight: 800; font-size: 1.05rem;">{p1}</div>'
-        f'<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.15rem;">{team1["emoji"]} {team1["name"]}</div>'
+        # Player 1 Plate
+        f'<div style="flex: 1; padding: 0.85rem; border-radius: 0.6rem; background: rgba(255, 255, 255, 0.03); border-left: 4px solid {team1["color"]};">'
+        f'<div style="color: #ffffff; font-weight: 900; font-size: 1.05rem;">{p1}</div>'
+        f'<div style="color: #94a3b8; font-size: 0.78rem; margin-top: 0.2rem; font-weight: 600;">{team1["emoji"]} {team1["short_name"]}</div>'
         f'</div>'
-        f'<div style="color: #fbbf24; font-weight: 900; font-size: 1rem; font-style: italic;">VS</div>'
-        f'<div style="flex: 1; padding: 0.75rem; border-radius: 0.5rem; background: rgba(255,255,255,0.03); border-left: 4px solid {team2["color"]};">'
-        f'<div style="color: #ffffff; font-weight: 800; font-size: 1.05rem;">{p2}</div>'
-        f'<div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.15rem;">{team2["emoji"]} {team2["name"]}</div>'
+        # VS Badge
+        f'<div style="color: #fbbf24; font-weight: 900; font-size: 1.15rem; font-style: italic; text-shadow: 0 0 10px rgba(251, 191, 36, 0.4);">VS</div>'
+        # Player 2 Plate
+        f'<div style="flex: 1; padding: 0.85rem; border-radius: 0.6rem; background: rgba(255, 255, 255, 0.03); border-left: 4px solid {team2["color"]};">'
+        f'<div style="color: #ffffff; font-weight: 900; font-size: 1.05rem;">{p2}</div>'
+        f'<div style="color: #94a3b8; font-size: 0.78rem; margin-top: 0.2rem; font-weight: 600;">{team2["emoji"]} {team2["short_name"]}</div>'
         f'</div>'
         f'</div>'
         f'</div>'
     )
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown(plate_html, unsafe_allow_html=True)
 
 
 def main() -> None:
-    """Render the streamlined championship home arena."""
     render_top_navigation_bar("Home")
+    render_home_styles()
 
-    render_soundcloud_player(
-        track_url="https://soundcloud.com/mak-division/the-antidote",
-        title="TLOL4 ARENA ANTHEM • The Antidote",
-        auto_play=True,
-        compact=True,
+    # 🎺 Official IPL Arena Background Anthem
+    render_arena_anthem(
+        video_id="yq3SedbPF08",
+        title="TLOL4 ARENA • IPL Stadium Theme Anthem",
     )
 
     config = get_config()
@@ -116,131 +321,48 @@ def main() -> None:
     fixtures = safe_load(load_fixtures, FIXTURE_COLUMNS)
 
     # --------------------------------------------------
-    # MINIMAL 2-TONE STADIUM DISCO HERO BANNER
+    # 1. 2-TONE STADIUM DISCO HERO BANNER
     # --------------------------------------------------
-    st.markdown(
-        """
-        <style>
-        @keyframes discoGoldBlue {
-            0% {
-                border-color: #fbbf24;
-                box-shadow: 0 0 20px rgba(251, 191, 36, 0.45), inset 0 0 15px rgba(59, 130, 246, 0.2);
-            }
-            50% {
-                border-color: #3b82f6;
-                box-shadow: 0 0 25px rgba(59, 130, 246, 0.5), inset 0 0 20px rgba(251, 191, 36, 0.25);
-            }
-            100% {
-                border-color: #fbbf24;
-                box-shadow: 0 0 20px rgba(251, 191, 36, 0.45), inset 0 0 15px rgba(59, 130, 246, 0.2);
-            }
-        }
-
-        @keyframes discoFloodlight {
-            0% { transform: translateX(-100%) rotate(25deg); opacity: 0; }
-            30% { opacity: 0.35; }
-            70% { opacity: 0.35; }
-            100% { transform: translateX(100%) rotate(25deg); opacity: 0; }
-        }
-
-        @keyframes beatGlowOrb {
-            0%, 100% { transform: scale(0.9); opacity: 0.3; }
-            50% { transform: scale(1.18); opacity: 0.75; }
-        }
-
-        .disco-banner {
-            position: relative;
-            padding: 3.25rem 2rem;
-            border-radius: 1.25rem;
-            background: linear-gradient(135deg, rgba(11, 19, 43, 0.94), rgba(15, 23, 42, 0.92)), 
-                        url('https://images.unsplash.com/photo-1540747737956-3787293a9fc4?q=80&w=2560&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
-            text-align: center;
-            margin-bottom: 1.5rem;
-            border: 2px solid #fbbf24;
-            overflow: hidden;
-            animation: discoGoldBlue 3.2s infinite ease-in-out;
-        }
-
-        .disco-sweep-light {
-            position: absolute;
-            top: -50%;
-            left: 0;
-            width: 45%;
-            height: 200%;
-            background: linear-gradient(90deg, transparent 0%, rgba(251, 191, 36, 0.25) 50%, transparent 100%);
-            pointer-events: none;
-            animation: discoFloodlight 6s infinite ease-in-out;
-            filter: blur(10px);
-            z-index: 1;
-        }
-
-        .disco-orb-left {
-            position: absolute;
-            top: -30px;
-            left: -30px;
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.7) 0%, rgba(59, 130, 246, 0) 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: beatGlowOrb 2.8s infinite ease-in-out;
-            filter: blur(8px);
-            z-index: 1;
-        }
-
-        .disco-orb-right {
-            position: absolute;
-            top: -30px;
-            right: -30px;
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle, rgba(251, 191, 36, 0.7) 0%, rgba(251, 191, 36, 0) 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: beatGlowOrb 2.8s infinite ease-in-out 1.4s;
-            filter: blur(8px);
-            z-index: 1;
-        }
-
-        .disco-title {
-            margin: 0.8rem 0 0.25rem 0;
-            font-weight: 900;
-            font-size: 2.85rem;
-            letter-spacing: -0.5px;
-            text-transform: uppercase;
-            color: #ffffff !important;
-            text-shadow: 0 0 16px rgba(251, 191, 36, 0.4), 0 2px 8px rgba(0, 0, 0, 0.9);
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
+    # --------------------------------------------------
+    # EDM LASER STROBE HERO BANNER
+    # --------------------------------------------------
     banner_html = (
-        f'<div class="disco-banner">'
-        f'<div class="disco-sweep-light"></div>'
-        f'<div class="disco-orb-left"></div>'
-        f'<div class="disco-orb-right"></div>'
+        f'<div class="edm-arena-hero">'
+        f'<div class="laser-beam-1"></div>'
+        f'<div class="laser-beam-2"></div>'
+        f'<div class="sub-orb-cyan"></div>'
+        f'<div class="sub-orb-gold"></div>'
         f'<div style="position: relative; z-index: 2;">'
-        f'<span style="background: rgba(251, 191, 36, 0.15); border: 1px solid #fbbf24; color: #fbbf24 !important; '
-        f'font-size: 0.8rem; font-weight: 800; padding: 0.35rem 1.1rem; border-radius: 2rem; '
-        f'text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);">'
-        f'🪩 LIVE STADIUM ARENA'
+        f'<span style="background: rgba(251, 191, 36, 0.2); border: 1.5px solid #fbbf24; color: #fbbf24 !important; '
+        f'font-size: 0.82rem; font-weight: 900; padding: 0.4rem 1.3rem; border-radius: 2rem; '
+        f'text-transform: uppercase; letter-spacing: 2.5px; box-shadow: 0 0 18px rgba(251, 191, 36, 0.6);">'
+        f'⚡ LIVE EDM STADIUM FESTIVAL'
         f'</span>'
-        f'<h1 class="disco-title">🏆 {config["app"]["tournament_name"].upper()}</h1>'
-        f'<p style="margin: 0.35rem 0 0 0; color: #cbd5e1 !important; font-size: 1.15rem; font-weight: 600; '
-        f'letter-spacing: 0.5px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">'
+        f'<h1 style="color: #ffffff; font-weight: 900; font-size: 3rem; margin: 0.85rem 0 0.3rem 0; '
+        f'text-transform: uppercase; letter-spacing: -0.5px; text-shadow: 0 0 25px rgba(251, 191, 36, 0.55), 0 3px 12px rgba(0,0,0,0.9);">'
+        f'🏆 {config["app"]["tournament_name"].upper()}'
+        f'</h1>'
+        f'<p style="color: #e2e8f0; font-size: 1.15rem; font-weight: 700; margin: 0; letter-spacing: 0.5px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">'
         f'{config["app"]["tagline"]}'
         f'</p>'
+        # Animated Audio Equalizer Bars matching the EDM Beat
+        f'<div class="eq-container">'
+        f'<div class="eq-bar" style="animation: eqBounce1 0.45s infinite ease-in-out;"></div>'
+        f'<div class="eq-bar" style="animation: eqBounce3 0.6s infinite ease-in-out 0.1s;"></div>'
+        f'<div class="eq-bar" style="animation: eqBounce2 0.38s infinite ease-in-out 0.2s;"></div>'
+        f'<div class="eq-bar" style="animation: eqBounce4 0.52s infinite ease-in-out 0.05s;"></div>'
+        f'<div class="eq-bar" style="animation: eqBounce1 0.48s infinite ease-in-out 0.15s;"></div>'
+        f'<div class="eq-bar" style="animation: eqBounce3 0.42s infinite ease-in-out 0.25s;"></div>'
+        f'<div class="eq-bar" style="animation: eqBounce2 0.55s infinite ease-in-out 0.3s;"></div>'
+        f'<div class="eq-bar" style="animation: eqBounce4 0.39s infinite ease-in-out 0.12s;"></div>'
+        f'</div>'
         f'</div>'
         f'</div>'
     )
     st.markdown(banner_html, unsafe_allow_html=True)
 
     # --------------------------------------------------
-    # FRANCHISE QUICK ACCESS SQUAD ROOMS
+    # 2. FRANCHISE SQUAD COMMAND ROOMS
     # --------------------------------------------------
     team_pages_dict = st.session_state.get("team_pages", {})
     teams = config.get("teams", [])
@@ -254,13 +376,10 @@ def main() -> None:
 
             with team_cols[idx]:
                 card_html = (
-                    f'<div style="background: rgba(15, 23, 42, 0.85); border-top: 4px solid {meta["color"]}; '
-                    f'border-left: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1); '
-                    f'border-bottom: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; padding: 1rem; '
-                    f'text-align: center; margin-bottom: 0.4rem; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">'
-                    f'<div style="font-size: 2rem; margin-bottom: 0.2rem; filter: drop-shadow(0 0 8px {meta["color"]});">{meta["emoji"]}</div>'
-                    f'<div style="color: #ffffff; font-size: 1rem; font-weight: 800;">{team_name}</div>'
-                    f'<div style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.25rem;">👑 Capt: <strong style="color: #ffffff;">{team.get("captain", "TBD")}</strong></div>'
+                    f'<div class="team-hub-card" style="border-top: 4px solid {meta["color"]};">'
+                    f'<div style="font-size: 2.1rem; margin-bottom: 0.2rem; filter: drop-shadow(0 0 10px {meta["color"]});">{meta["emoji"]}</div>'
+                    f'<div style="color: #ffffff; font-size: 1.05rem; font-weight: 900;">{team_name}</div>'
+                    f'<div style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.3rem;">👑 Capt: <strong style="color: #ffffff;">{team.get("captain", "TBD")}</strong></div>'
                     f'</div>'
                 )
                 st.markdown(card_html, unsafe_allow_html=True)
@@ -275,9 +394,9 @@ def main() -> None:
     st.markdown("---")
 
     # --------------------------------------------------
-    # STANDINGS BOARD
+    # 3. CUMULATIVE TEAM STANDINGS DECK
     # --------------------------------------------------
-    st.subheader("🏆 Team Cumulative Standings")
+    st.subheader("🏆 Championship Standings Deck")
     team_scores = get_team_scores(participants)
 
     if not team_scores.empty:
@@ -287,7 +406,7 @@ def main() -> None:
                 render_standings_card(row["Team"], row["Points"], rank)
 
     # --------------------------------------------------
-    # BREAKDOWN MATRIX (LIVE SPREADSHEET TABLE)
+    # 4. MULTI-SPORT POINTS BREAKDOWN MATRIX
     # --------------------------------------------------
     if not participants.empty:
         render_points_matrix_table(participants)
@@ -295,19 +414,18 @@ def main() -> None:
     st.markdown("---")
 
     # --------------------------------------------------
-    # SPORT-WISE PLAYOFF & FINALS BRACKET (COLLAPSIBLE)
+    # 5. SPORT-WISE PLAYOFF & FINALS BRACKET (COLLAPSIBLE)
     # --------------------------------------------------
     TARGET_BRACKET_SPORTS = ["Carrom", "Foosball", "Badminton", "Table Tennis"]
 
-    with st.expander("🎮 Live Sport Knockout Brackets (Click to Expand)", expanded=False):
-        st.caption("Select a sport below to inspect its tournament bracket and playoff progression.")
+    with st.expander("🎮 Live Tournament Progression & Brackets (Click to Inspect)", expanded=False):
+        st.caption("Select a sport below to review stage-by-stage progression or group stage ladders.")
 
         if not fixtures.empty and "Sport" in fixtures.columns:
             available_target_sports = [
                 s for s in TARGET_BRACKET_SPORTS
                 if any(fixtures["Sport"].astype(str).str.strip().str.lower() == s.lower())
             ]
-
             display_sports = available_target_sports if available_target_sports else TARGET_BRACKET_SPORTS
 
             tab_labels = [f"{get_sport_icon(sport)} {sport}" for sport in display_sports]
@@ -317,12 +435,12 @@ def main() -> None:
                 with tab:
                     render_tournament_bracket_for_sport(sport, fixtures)
         else:
-            st.info("No fixtures data available to generate brackets.")
+            st.info("No fixture records found to construct championship brackets.")
 
     st.markdown("---")
 
     # --------------------------------------------------
-    # UPCOMING ARENA FIXTURES
+    # 6. UPCOMING ARENA FIXTURES
     # --------------------------------------------------
     st.subheader("⚡ Next Arena Showdowns")
     upcoming = fixtures[fixtures["Status"].astype(str).str.strip().str.lower() == "upcoming"].head(4)
@@ -338,11 +456,11 @@ def main() -> None:
     st.markdown("---")
 
     # --------------------------------------------------
-    # FOOTER NAVIGATION
+    # 7. QUICK DISPATCH FOOTER NAVIGATION
     # --------------------------------------------------
     nav_cols = st.columns(2)
     with nav_cols[0]:
-        st.page_link("pages/Fixtures.py", label="📅 View Complete Fixture Schedule", use_container_width=True)
+        st.page_link("pages/Fixtures.py", label="📅 View Complete Match Schedule", use_container_width=True)
     with nav_cols[1]:
         st.page_link("pages/Leaderboard.py", label="🏅 View Detailed MVP Leaderboard", use_container_width=True)
 

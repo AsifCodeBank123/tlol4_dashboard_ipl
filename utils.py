@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import functools
 import json
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -10,21 +12,24 @@ from typing import Any, Callable
 import gspread
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from google.oauth2.service_account import Credentials
 
 CONFIG_PATH = Path("config.json")
 GOOGLE_SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 
-def get_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
-    """Return application configuration from config.json."""
-    with path.open("r", encoding="utf-8") as file:
+@functools.lru_cache(maxsize=1)
+def get_config(path: str = str(CONFIG_PATH)) -> dict[str, Any]:
+    """Return cached application configuration from config.json."""
+    config_file = Path(path)
+    with config_file.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
 def apply_theme_variables(config: dict[str, Any]) -> None:
     """Inject theme variables from config.json."""
-    theme = config["theme"]
+    theme = config.get("theme", {})
     variables = [f"--{key.replace('_', '-')}: {value};" for key, value in theme.items()]
     st.markdown(f"<style>:root {{{' '.join(variables)}}}</style>", unsafe_allow_html=True)
 
@@ -41,11 +46,12 @@ def cache_data(ttl: int | None = None) -> Callable:
 
 
 def connect_google_sheet(config: dict[str, Any] | None = None) -> gspread.Spreadsheet:
+    """Authorize and establish connection to Google Sheets."""
     cfg = config or get_config()
     sheets_cfg = cfg["google_sheets"]
 
     try:
-        # Streamlit Cloud
+        # Streamlit Cloud execution
         credentials = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
             scopes=GOOGLE_SCOPES,
@@ -53,12 +59,10 @@ def connect_google_sheet(config: dict[str, Any] | None = None) -> gspread.Spread
     except Exception:
         # Local execution
         credentials_path = Path(sheets_cfg["credentials_file"])
-
         if not credentials_path.exists():
             raise FileNotFoundError(
                 f"Google service account file not found: {credentials_path}"
             )
-
         credentials = Credentials.from_service_account_file(
             credentials_path,
             scopes=GOOGLE_SCOPES,
@@ -77,41 +81,42 @@ def _load_worksheet_records(worksheet_name: str) -> pd.DataFrame:
 
 
 def _copy_if_missing(df: pd.DataFrame, target: str, source: str) -> pd.DataFrame:
-    """Copy a source column to a target column if the target column does not exist."""
+    """Copy a source column to a target column if target does not exist."""
     if target not in df.columns and source in df.columns:
         df[target] = df[source]
     return df
 
 
 def _clean_participants(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize participant data for all sports.
-
-    Supports both old `House` column and new `Team` column.
-    """
+    """Normalize participant data for all sports including participation points."""
     df = _copy_if_missing(df, "Team", "House")
 
-    expected_columns = ["Participant", "Team", "Sport", "Points", "Matches", "Wins", "Bonus"]
+    expected_columns = [
+        "Participant",
+        "Team",
+        "Sport",
+        "Points",
+        "Matches",
+        "Wins",
+        "Bonus",
+        "Participation Points",
+    ]
     df = df.reindex(columns=expected_columns)
 
-    text_columns = ["Participant", "Team", "Sport"]
-    numeric_columns = ["Points", "Matches", "Wins", "Bonus"]
+    for col in ["Participant", "Team", "Sport"]:
+        df[col] = df[col].fillna("Unknown").astype(str).str.strip()
 
-    for column in text_columns:
-        df[column] = df[column].fillna("Unknown").astype(str).str.strip()
-
-    for column in numeric_columns:
-        df[column] = pd.to_numeric(df[column], errors="coerce").fillna(0)
+    for col in ["Points", "Matches", "Wins", "Bonus", "Participation Points"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
     return df
 
 
 def _clean_fixtures(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize fixture data.
-
-    Supports both old `House 1/House 2` columns and new `Team 1/Team 2` columns.
-    """
+    """Normalize fixture data."""
     df = _copy_if_missing(df, "Team 1", "House 1")
     df = _copy_if_missing(df, "Team 2", "House 2")
+    df = _copy_if_missing(df, "Stage", "Time")
 
     expected_columns = [
         "Sport",
@@ -133,7 +138,7 @@ def _clean_fixtures(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-@cache_data(ttl=get_config()["data"]["refresh_interval_seconds"])
+@cache_data(ttl=get_config()["data"].get("refresh_interval_seconds", 300))
 def load_participants() -> pd.DataFrame:
     """Load participant records from the configured worksheet."""
     worksheet_name = get_config()["google_sheets"]["worksheets"]["participants"]
@@ -141,29 +146,36 @@ def load_participants() -> pd.DataFrame:
 
 
 def load_players() -> pd.DataFrame:
-    """Backward-compatible alias for older cricket-specific code."""
+    """Backward-compatible alias for older participant loaders."""
     return load_participants()
 
 
-@cache_data(ttl=get_config()["data"]["refresh_interval_seconds"])
+@cache_data(ttl=get_config()["data"].get("refresh_interval_seconds", 300))
 def load_fixtures() -> pd.DataFrame:
     """Load fixture records from the configured worksheet."""
     worksheet_name = get_config()["google_sheets"]["worksheets"]["fixtures"]
     return _clean_fixtures(_load_worksheet_records(worksheet_name))
 
 
-@cache_data(ttl=get_config()["data"]["refresh_interval_seconds"])
+@cache_data(ttl=get_config()["data"].get("refresh_interval_seconds", 300))
 def load_leaderboard() -> pd.DataFrame:
-    """Load participant leaderboard with merged points across sports."""
+    """Load participant leaderboard with points, bonus, and participation points."""
     participants = load_participants().copy()
+
+    participants["Total_Score"] = (
+        participants["Points"]
+        + participants["Bonus"]
+        + participants["Participation Points"]
+    )
 
     leaderboard = (
         participants.groupby(["Participant", "Team"], as_index=False)
         .agg(
-            Points=("Points", "sum"),
+            Points=("Total_Score", "sum"),
             Matches=("Matches", "sum"),
             Wins=("Wins", "sum"),
             Bonus=("Bonus", "sum"),
+            Participation_Points=("Participation Points", "sum"),
             Sports_Played=("Sport", "nunique"),
         )
         .sort_values("Points", ascending=False)
@@ -176,6 +188,7 @@ def load_leaderboard() -> pd.DataFrame:
 def refresh_data() -> None:
     """Clear cached data and update the last refresh timestamp."""
     st.cache_data.clear()
+    get_config.cache_clear()
     st.session_state["last_refresh"] = datetime.now().strftime("%d %b %Y, %I:%M %p")
 
 
@@ -191,14 +204,14 @@ def get_status_color(status: str, config: dict[str, Any] | None = None) -> str:
     return cfg["data"].get("status_colors", {}).get(status, cfg["theme"]["muted_color"])
 
 
-def get_team_meta(team_name: str | None) -> dict:
-    """Fuzzy and case-insensitive lookup for team metadata to avoid 'Unknown'."""
+def get_team_meta(team_name: str | None) -> dict[str, str]:
+    """Config-driven fuzzy and alias lookup for team metadata."""
     config = get_config()
     default_meta = {
         "name": str(team_name) if team_name else "Unknown",
         "color": "#fbbf24",
         "emoji": "🛡️",
-        "short_name": "TBD"
+        "short_name": "TBD",
     }
 
     if not team_name or pd.isna(team_name):
@@ -209,39 +222,103 @@ def get_team_meta(team_name: str | None) -> dict:
     for team in config.get("teams", []):
         t_name = team["name"].strip().casefold()
         t_short = team.get("short_name", "").strip().casefold()
+        aliases = [str(a).strip().casefold() for a in team.get("aliases", [])]
 
-        # Exact match, short name match, or partial fuzzy match
-        if clean_input == t_name or clean_input == t_short:
+        if clean_input in (t_name, t_short) or any(alias in clean_input for alias in aliases):
             return team
-        
-        # Handle "Royal Challengers of Bhagyashree" vs "Royal Challengers Bhagyashree"
-        if "bhagyashree" in clean_input and "bhagyashree" in t_name:
+
+        # Default fallback keyword heuristics
+        if any(kw in clean_input for kw in ["bhagyashree", "rcb"]) and "bhagyashree" in t_name:
             return team
-        if "gayatri" in clean_input and "gayatri" in t_name:
+        if any(kw in clean_input for kw in ["gayatri", "gi"]) and "gayatri" in t_name:
             return team
-        if "pooja" in clean_input and "pooja" in t_name:
+        if any(kw in clean_input for kw in ["pooja", "psk"]) and "pooja" in t_name:
             return team
-        if "komal" in clean_input and "komal" in t_name:
+        if any(kw in clean_input for kw in ["komal", "kkr"]) and "komal" in t_name:
             return team
 
     return default_meta
 
+
 def get_house_meta(house_name: str, config: dict[str, Any] | None = None) -> dict[str, str]:
-    """Backward-compatible alias for old house terminology."""
-    return get_team_meta(house_name, config)
+    """Backward-compatible alias for house metadata."""
+    return get_team_meta(house_name)
 
 
-def get_team_scores(participants: pd.DataFrame) -> pd.DataFrame:
-    """Calculate total points by team."""
-    if participants.empty:
+def get_team_scores(participants_df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate cumulative scores per team including match points, bonuses, and team entries."""
+    if participants_df.empty:
         return pd.DataFrame(columns=["Team", "Points"])
-    return participants.groupby("Team", as_index=False)["Points"].sum().sort_values("Points", ascending=False)
+
+    df = participants_df.copy()
+    pts = pd.to_numeric(df.get("Points", 0), errors="coerce").fillna(0.0)
+    bonus = pd.to_numeric(df.get("Bonus", 0), errors="coerce").fillna(0.0)
+    part_pts = pd.to_numeric(df.get("Participation Points", 0), errors="coerce").fillna(0.0)
+
+    # Sum ALL columns for each row
+    df["TotalScore"] = pts + bonus + part_pts
+
+    # Group by Team across ALL rows (both individual players and team awards)
+    team_scores = (
+        df.groupby("Team", as_index=False)["TotalScore"]
+        .sum()
+        .rename(columns={"TotalScore": "Points"})
+        .sort_values(by="Points", ascending=False)
+    )
+    return team_scores
+
+
+def render_points_matrix_table(participants_df: pd.DataFrame) -> None:
+    """Generates the multi-sport breakdown matrix including all team awards and individual sports."""
+    if participants_df.empty:
+        return
+
+    df = participants_df.copy()
+    pts = pd.to_numeric(df.get("Points", 0), errors="coerce").fillna(0.0)
+    bonus = pd.to_numeric(df.get("Bonus", 0), errors="coerce").fillna(0.0)
+    part_pts = pd.to_numeric(df.get("Participation Points", 0), errors="coerce").fillna(0.0)
+
+    df["OverallPoints"] = pts + bonus + part_pts
+
+    # Pivot all rows: sums all participant points under each Sport per Team
+    matrix = df.pivot_table(
+        index="Sport",
+        columns="Team",
+        values="OverallPoints",
+        aggfunc="sum",
+        fill_value=0,
+    )
+
+    config = get_config()
+    team_order = [t["name"] for t in config.get("teams", []) if t["name"] in matrix.columns]
+    if team_order:
+        remaining = [c for c in matrix.columns if c not in team_order]
+        matrix = matrix[team_order + remaining]
+
+    # Calculate overall total sum per team
+    totals = matrix.sum(axis=0)
+    matrix.loc["Total Points till now"] = totals
+
+    # Format 0 as blank for visual clarity
+    display_matrix = matrix.astype(int).astype(str).replace("0", "")
+
+    st.markdown(
+        """
+        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(251, 191, 36, 0.3); 
+        border-radius: 1rem; padding: 1.25rem; margin: 1.5rem 0 1rem 0; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+            <div style="color: #fbbf24; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+            📋 Multi-Sport Points Breakdown Matrix
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.dataframe(display_matrix, use_container_width=True)
 
 
 def get_house_scores(participants: pd.DataFrame) -> pd.DataFrame:
-    """Backward-compatible alias for old house terminology."""
-    scores = get_team_scores(participants)
-    return scores.rename(columns={"Team": "House"})
+    """Backward-compatible alias for team scores."""
+    return get_team_scores(participants).rename(columns={"Team": "House"})
 
 
 def get_sport_icon(sport: str, config: dict[str, Any] | None = None) -> str:
@@ -264,143 +341,244 @@ def safe_load(loader: Callable[[], pd.DataFrame], empty_columns: list[str]) -> p
         return pd.DataFrame(columns=empty_columns)
 
 
-def is_team_bonus_entry(row) -> bool:
+def is_team_bonus_entry(row: pd.Series | dict) -> bool:
     """Detect if a row represents team-level bonus points rather than a human player."""
     participant = str(row.get("Participant", "")).strip().casefold()
     team = str(row.get("Team", "")).strip().casefold()
     sport = str(row.get("Sport", "")).strip().casefold()
-    
     bonus_keywords = ["points", "bonus", "participation", "underdog", "female"]
     return participant == team or any(kw in sport for kw in bonus_keywords)
 
-
-def render_points_matrix_table(participants_df: pd.DataFrame) -> None:
-    """Generates the exact team breakdown matrix table from the sheet."""
-    if participants_df.empty:
-        return
-
-    # Pivot all rows (both player points and team bonuses) across Sport/Category vs Team
-    matrix = participants_df.pivot_table(
-        index="Sport",
-        columns="Team",
-        values="Points",
-        aggfunc="sum",
-        fill_value=0,
-    )
-
-    config = get_config()
-    team_order = [t["name"] for t in config.get("teams", []) if t["name"] in matrix.columns]
-    if team_order:
-        # Keep non-matching team columns as well if any
-        remaining = [c for c in matrix.columns if c not in team_order]
-        matrix = matrix[team_order + remaining]
-
-    # Calculate total sum per team
-    totals = matrix.sum(axis=0)
-    matrix.loc["Total Points till now"] = totals
-
-    # Format 0 as blank for visual clarity matching the spreadsheet screenshot
-    display_matrix = matrix.astype(int).astype(str).replace("0", "")
-
-    st.markdown(
-        """
-            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(251, 191, 36, 0.3); 
-            border-radius: 1rem; padding: 1.25rem; margin: 1.5rem 0 1rem 0; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
-                <div style="color: #fbbf24; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
-                📋 Multi-Sport Points Breakdown Matrix
-                </div>
-            </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.dataframe(display_matrix, use_container_width=True)
-
-
-def inject_stadium_audio(
-    anthem_url: str | None = None,
-    anthem_title: str = "STADIUM BROADCAST",
-    subtitle: str = "Live Track",
-) -> None:
-    """Inject a slim, compact top audio bar without claiming sidebar width."""
-    import streamlit as st
-
-    if isinstance(anthem_url, str) and anthem_url.strip():
-        audio_source = anthem_url.strip()
-    else:
-        audio_source = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-
-    audio_html = (
-        f'<div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(251, 191, 36, 0.4); '
-        f'border-radius: 0.75rem; padding: 0.5rem 1rem; margin-bottom: 1rem; display: flex; '
-        f'align-items: center; justify-content: space-between; gap: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">'
-        f'<div style="display: flex; align-items: center; gap: 0.6rem; min-width: 220px;">'
-        f'<span style="width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981; display: inline-block;"></span>'
-        f'<div>'
-        f'<div style="color: #fbbf24; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">🏟️ {anthem_title}</div>'
-        f'<div style="color: #94a3b8; font-size: 0.7rem;">{subtitle}</div>'
-        f'</div>'
-        f'</div>'
-        f'<div style="flex: 1; max-width: 320px;">'
-        f'<audio autoplay loop controls style="width: 100%; height: 26px; outline: none;">'
-        f'<source src="{audio_source}" type="audio/mpeg">'
-        f'</audio>'
-        f'</div>'
-        f'</div>'
-    )
-    # Render in main container instead of sidebar
-    st.markdown(audio_html, unsafe_allow_html=True)
-
-import urllib.parse
-import streamlit as st
 import streamlit.components.v1 as components
 
-def render_soundcloud_player(
-    track_url: str,
-    title: str = "ARENA AUDIO BROADCAST",
-    auto_play: bool = False,
-    compact: bool = True,
-) -> None:
-    """Renders an embedded SoundCloud HTML5 player widget."""
-    encoded_url = urllib.parse.quote(track_url, safe="")
-    height = 80 if compact else 166
-    
-    embed_url = (
-        f"https://w.soundcloud.com/player/?url={encoded_url}"
-        f"&color=%23fbbf24"
-        f"&auto_play={'true' if auto_play else 'false'}"
-        f"&hide_related=true"
-        f"&show_comments=false"
-        f"&show_user=true"
-        f"&show_reposts=false"
-        f"&show_teaser=false"
-        f"&visual={'false' if compact else 'true'}"
-    )
 
+def render_arena_anthem(
+    video_id: str = "yq3SedbPF08",
+    title: str = "TLOL4 ARENA • IPL Stadium EDM Theme",
+) -> None:
+    """Renders a pure audio controller with YouTube completely hidden off-screen."""
+    player_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            * {{
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }}
+            body {{
+                background: transparent;
+                overflow: hidden;
+            }}
+            .arena-controller {{
+                background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 58, 138, 0.92));
+                border: 1.5px solid #fbbf24;
+                border-radius: 0.85rem;
+                padding: 0.6rem 1.1rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(251, 191, 36, 0.25);
+            }}
+            .stream-meta {{
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+            }}
+            .live-dot {{
+                width: 9px;
+                height: 9px;
+                background-color: #10b981;
+                border-radius: 50%;
+                box-shadow: 0 0 8px #10b981;
+                animation: liveBlink 1.4s infinite ease-in-out;
+            }}
+            @keyframes liveBlink {{
+                0%, 100% {{ transform: scale(0.9); opacity: 0.75; }}
+                50% {{ transform: scale(1.3); opacity: 1; }}
+            }}
+            .title-text {{
+                color: #fbbf24;
+                font-size: 0.85rem;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }}
+            .sub-text {{
+                color: #94a3b8;
+                font-size: 0.72rem;
+                font-weight: 600;
+            }}
+            .play-btn {{
+                background: linear-gradient(135deg, #d97706, #fbbf24);
+                color: #0f172a;
+                border: none;
+                border-radius: 2rem;
+                padding: 0.4rem 1.1rem;
+                font-size: 0.78rem;
+                font-weight: 900;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 0.45rem;
+                box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+                white-space: nowrap;
+            }}
+            .play-btn:hover {{
+                transform: scale(1.04);
+                box-shadow: 0 0 16px rgba(251, 191, 36, 0.65);
+            }}
+            /* Completely offscreen - never visible to users, yet active for browser audio */
+            #offscreen-audio-pod {{
+                position: fixed;
+                left: -9999px;
+                top: -9999px;
+                width: 250px;
+                height: 200px;
+                visibility: hidden;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="arena-controller">
+            <div class="stream-meta">
+                <div class="live-dot"></div>
+                <div>
+                    <div class="title-text">🎺 {title}</div>
+                    <div class="sub-text">TLOL Stadium Audio Broadcast</div>
+                </div>
+            </div>
+            <div>
+                <button id="toggle-btn" class="play-btn" onclick="togglePlayback()">
+                    <span id="btn-icon">▶</span> <span id="btn-label">PLAY ANTHEM</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="offscreen-audio-pod">
+            <div id="yt-audio-anchor"></div>
+        </div>
+
+        <script src="https://www.youtube.com/iframe_api"></script>
+        <script>
+            let player;
+            let active = false;
+            const btn = document.getElementById('toggle-btn');
+            const icon = document.getElementById('btn-icon');
+            const label = document.getElementById('btn-label');
+
+            function onYouTubeIframeAPIReady() {{
+                player = new YT.Player('yt-audio-anchor', {{
+                    height: '200',
+                    width: '250',
+                    videoId: '{video_id}',
+                    playerVars: {{
+                        'autoplay': 1,
+                        'controls': 0,
+                        'playsinline': 1,
+                        'disablekb': 1
+                    }},
+                    events: {{
+                        'onReady': (e) => {{
+                            e.target.playVideo();
+                        }},
+                        'onStateChange': onPlayerStateChange
+                    }}
+                }});
+            }}
+
+            function onPlayerStateChange(e) {{
+                // YT.PlayerState.ENDED is 0: loop automatically
+                if (e.data === 0) {{
+                    player.seekTo(0);
+                    player.playVideo();
+                }}
+                // Playing
+                if (e.data === 1) {{
+                    active = true;
+                    icon.textContent = "⏸";
+                    label.textContent = "PAUSE";
+                }}
+                // Paused
+                if (e.data === 2) {{
+                    active = false;
+                    icon.textContent = "▶";
+                    label.textContent = "PLAY ANTHEM";
+                }}
+            }}
+
+            function togglePlayback() {{
+                if (!player) return;
+                if (!active) {{
+                    player.playVideo();
+                }} else {{
+                    player.pauseVideo();
+                }}
+            }}
+        </script>
+    </body>
+    </html>
+    """
+
+    components.html(player_html, height=65)
+
+def play_franchise_audio(team_name: str) -> None:
+    """Plays pure background anthem automatically across all 4 franchises."""
+    clean_team = str(team_name).lower()
+
+    # 4-Team Anthem Mapping
+    if any(kw in clean_team for kw in ["gayatri", "gi"]):
+        video_id = "4pJPj_fkQhc"  # Mumbai Indians - Duniya Hila Denge Hum
+        track_label = "Duniya Hila Denge Hum • Gayatri Indians"
+    elif any(kw in clean_team for kw in ["pooja", "psk"]):
+        video_id = "ozVfeBqJnbs"  # CSK Whistle Podu
+        track_label = "Whistle Podu • Pooja Super Kings"
+    elif any(kw in clean_team for kw in ["komal", "kkr"]):
+        video_id = "GkQprQygqk4"  # KKR Korbo Lorbo Jeetbo
+        track_label = "Korbo Lorbo Jeetbo • Komal Knight Riders"
+    elif any(kw in clean_team for kw in ["bhagyashree", "rcb"]):
+        video_id = "WOZSI2_m-3o"  # Alan Walker, Sofiloud - Team Side feat. RCB
+        track_label = "Team Side (Play Bold) • Royal Challengers of Bhagyashree"
+    else:
+        return
+
+    # Visual HUD status badge
     st.markdown(
         f"""
-        <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(251, 191, 36, 0.4); 
-                    border-radius: 0.75rem; padding: 0.5rem 0.85rem; margin-bottom: 1rem; 
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-            <div style="color: #fbbf24; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(251, 191, 36, 0.4); 
+                    border-radius: 0.75rem; padding: 0.45rem 0.85rem; margin-bottom: 1rem; 
+                    display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: #fbbf24; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
                 <span style="width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981; display: inline-block;"></span>
-                🎵 {title}
+                🎵 PLAYING LIVE ARENA AUDIO: <strong style="color:#ffffff;">{track_label}</strong>
             </div>
+            <span style="color: #94a3b8; font-size: 0.75rem; font-style: italic;">Auto-Playing</span>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    # 1x1 zero-dimension iframe with autoplay enabled
     components.html(
-        f'<iframe width="100%" height="{height}" scrolling="no" frameborder="no" allow="autoplay" src="{embed_url}"></iframe>',
-        height=height + 10,
+        f"""
+        <iframe 
+            width="1" 
+            height="1" 
+            src="https://www.youtube.com/embed/{video_id}?autoplay=1&loop=1&playlist={video_id}&enablejsapi=1" 
+            allow="autoplay" 
+            style="display:none; border:0;">
+        </iframe>
+        """,
+        height=1,
     )
 
 def render_top_navigation_bar(current_page: str = "Home") -> None:
     """Render a clean status & sync bar without duplicate page links."""
-    import streamlit as st
-    from utils import get_last_refresh_label, refresh_data
-
     col_brand, col_sync, col_ref = st.columns([3.5, 1.8, 0.9])
 
     with col_brand:
@@ -423,6 +601,7 @@ def render_top_navigation_bar(current_page: str = "Home") -> None:
         if st.button("⚡ Sync", key=f"top_sync_{current_page.lower()}", use_container_width=True):
             refresh_data()
             st.rerun()
+
 
 def render_tournament_bracket_for_sport(sport: str, fixtures_df: pd.DataFrame) -> None:
     """Renders sport-specific tournament progression (Knockout Tree or Group + Knockout)."""
@@ -459,9 +638,17 @@ def render_tournament_bracket_for_sport(sport: str, fixtures_df: pd.DataFrame) -
         )
 
     def render_match_box(match_row: pd.Series, is_championship: bool = False) -> str:
-        border_style = "2px solid #fbbf24; box-shadow: 0 0 15px rgba(251,191,36,0.3);" if is_championship else "1px solid rgba(255,255,255,0.12);"
-        bg_style = "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,58,138,0.85));" if is_championship else "rgba(15,23,42,0.88);"
-        
+        border_style = (
+            "2px solid #fbbf24; box-shadow: 0 0 15px rgba(251,191,36,0.3);"
+            if is_championship
+            else "1px solid rgba(255,255,255,0.12);"
+        )
+        bg_style = (
+            "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,58,138,0.85));"
+            if is_championship
+            else "rgba(15,23,42,0.88);"
+        )
+
         return (
             f'<div style="background: {bg_style} border: {border_style} border-radius: 0.65rem; '
             f'padding: 0.65rem; margin-bottom: 0.6rem; min-width: 220px;">'
@@ -483,11 +670,11 @@ def render_tournament_bracket_for_sport(sport: str, fixtures_df: pd.DataFrame) -
             'border-radius: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #fbbf24; font-weight: 800;">'
             '🏓 Table Tennis Championship Progression (4 Groups • Top 2 Qualify for Quarters)'
             '</div>',
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
         tt_tabs = st.tabs(["📊 Group Stage (A, B, C, D)", "🏆 Knockout Finals (QF ➔ SF ➔ F01)"])
-        
+
         with tt_tabs[0]:
             g_cols = st.columns(4)
             group_codes = [("Group A", "GA"), ("Group B", "GB"), ("Group C", "GC"), ("Group D", "GD")]
@@ -563,5 +750,5 @@ def render_tournament_bracket_for_sport(sport: str, fixtures_df: pd.DataFrame) -
                 st.markdown(
                     '<div style="color:#64748b; font-size:0.75rem; text-align:center; padding:0.75rem; '
                     'background:rgba(255,255,255,0.02); border-radius:0.5rem;">Awaiting Lineup</div>',
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
