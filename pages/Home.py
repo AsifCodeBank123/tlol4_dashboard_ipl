@@ -232,6 +232,104 @@ def render_home_styles() -> None:
         unsafe_allow_html=True,
     )
 
+import textwrap
+
+def render_compact_home_podium(participants_df: pd.DataFrame) -> None:
+    """Render a space-efficient Top-3 MVP Podium without markdown indent leaks."""
+    if participants_df.empty:
+        return
+
+    df = participants_df.copy()
+    pts = pd.to_numeric(df.get("Points", 0), errors="coerce").fillna(0.0)
+    bonus = pd.to_numeric(df.get("Bonus", 0), errors="coerce").fillna(0.0)
+    part_pts = pd.to_numeric(df.get("Participation Points", 0), errors="coerce").fillna(0.0)
+    df["TotalScore"] = pts + bonus + part_pts
+
+    # Filter out franchise bonus rows (where Participant == Team)
+    athletes = df[
+        df["Participant"].astype(str).str.strip().str.casefold()
+        != df["Team"].astype(str).str.strip().str.casefold()
+    ].copy()
+
+    if athletes.empty:
+        return
+
+    top3 = (
+        athletes.groupby(["Participant", "Team"], as_index=False)["TotalScore"]
+        .sum()
+        .sort_values(by="TotalScore", ascending=False)
+        .head(3)
+        .reset_index(drop=True)
+    )
+
+    if len(top3) < 3:
+        return
+
+    first = top3.iloc[0]
+    second = top3.iloc[1]
+    third = top3.iloc[2]
+
+    m1 = get_team_meta(first["Team"])
+    m2 = get_team_meta(second["Team"])
+    m3 = get_team_meta(third["Team"])
+
+    # Using textwrap.dedent and zero indentation prevents the 4-space code block bug
+    podium_html = textwrap.dedent(f"""
+<style>
+.mini-podium-shelf {{
+    display: grid;
+    grid-template-columns: 1fr 1.08fr 1fr;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin: 0.5rem 0 1.25rem 0;
+}}
+.mini-pedestal {{
+    background: rgba(15, 23, 42, 0.9);
+    border-radius: 0.85rem;
+    padding: 0.85rem 0.6rem;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}}
+.pedestal-first {{
+    border: 1.5px solid #fbbf24;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.35);
+    padding: 1.1rem 0.6rem;
+}}
+.pedestal-second {{
+    border: 1px solid #94a3b8;
+}}
+.pedestal-third {{
+    border: 1px solid #b45309;
+}}
+</style>
+<div class="mini-podium-shelf">
+<div class="mini-pedestal pedestal-second">
+<div style="font-size: 1.4rem;">🥈</div>
+<div style="color: #94a3b8; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">RANK #2</div>
+<div style="color: #ffffff; font-weight: 900; font-size: 1.05rem; margin: 0.15rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{second["Participant"]}</div>
+<div style="color: {m2['color']}; font-size: 0.72rem; font-weight: 700;">{m2['emoji']} {m2['short_name']}</div>
+<div style="color: #ffffff; font-weight: 900; font-size: 1.35rem; margin-top: 0.3rem;">{format_points(second["TotalScore"])} <span style="font-size: 0.7rem; color: #94a3b8;">PTS</span></div>
+</div>
+<div class="mini-pedestal pedestal-first">
+<div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px #fbbf24);">👑</div>
+<div style="color: #fbbf24; font-size: 0.7rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;">LEAGUE MVP</div>
+<div style="color: #ffffff; font-weight: 900; font-size: 1.25rem; margin: 0.2rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{first["Participant"]}</div>
+<div style="color: {m1['color']}; font-size: 0.75rem; font-weight: 800;">{m1['emoji']} {m1['short_name']}</div>
+<div style="color: #fbbf24; font-weight: 900; font-size: 1.65rem; margin-top: 0.35rem; text-shadow: 0 0 10px rgba(251,191,36,0.4);">{format_points(first["TotalScore"])} <span style="font-size: 0.75rem; color: #cbd5e1;">PTS</span></div>
+</div>
+<div class="mini-pedestal pedestal-third">
+<div style="font-size: 1.4rem;">🥉</div>
+<div style="color: #b45309; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">RANK #3</div>
+<div style="color: #ffffff; font-weight: 900; font-size: 1.05rem; margin: 0.15rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{third["Participant"]}</div>
+<div style="color: {m3['color']}; font-size: 0.72rem; font-weight: 700;">{m3['emoji']} {m3['short_name']}</div>
+<div style="color: #ffffff; font-weight: 900; font-size: 1.35rem; margin-top: 0.3rem;">{format_points(third["TotalScore"])} <span style="font-size: 0.7rem; color: #94a3b8;">PTS</span></div>
+</div>
+</div>
+""").strip()
+
+    st.subheader("🥇 Top Individual MVPs")
+    st.markdown(podium_html, unsafe_allow_html=True)
 
 def render_standings_card(team_name: str, points: float, rank: int) -> None:
     """Render an IPL-styled championship standings card."""
@@ -405,16 +503,26 @@ def main() -> None:
             with col:
                 render_standings_card(row["Team"], row["Points"], rank)
 
+    st.markdown("---")
+    
     # --------------------------------------------------
-    # 4. MULTI-SPORT POINTS BREAKDOWN MATRIX
+    # 4. COMPACT TOP-3 MVP PODIUM (NEW SECTION)
     # --------------------------------------------------
-    if not participants.empty:
-        render_points_matrix_table(participants)
+    render_compact_home_podium(participants)
 
     st.markdown("---")
 
     # --------------------------------------------------
-    # 5. SPORT-WISE PLAYOFF & FINALS BRACKET (COLLAPSIBLE)
+    # 5. MULTI-SPORT POINTS BREAKDOWN MATRIX
+    # --------------------------------------------------
+    if not participants.empty:
+        render_points_matrix_table(participants)
+    # --------------------------------------------------
+
+    st.markdown("---")
+
+    # --------------------------------------------------
+    # 6. SPORT-WISE PLAYOFF & FINALS BRACKET (COLLAPSIBLE)
     # --------------------------------------------------
     TARGET_BRACKET_SPORTS = ["Carrom", "Foosball", "Badminton", "Table Tennis"]
 
@@ -440,7 +548,7 @@ def main() -> None:
     st.markdown("---")
 
     # --------------------------------------------------
-    # 6. UPCOMING ARENA FIXTURES
+    # 7. UPCOMING ARENA FIXTURES
     # --------------------------------------------------
     st.subheader("⚡ Next Arena Showdowns")
     upcoming = fixtures[fixtures["Status"].astype(str).str.strip().str.lower() == "upcoming"].head(4)
@@ -456,7 +564,7 @@ def main() -> None:
     st.markdown("---")
 
     # --------------------------------------------------
-    # 7. QUICK DISPATCH FOOTER NAVIGATION
+    # 8. QUICK DISPATCH FOOTER NAVIGATION
     # --------------------------------------------------
     nav_cols = st.columns(2)
     with nav_cols[0]:
