@@ -527,13 +527,14 @@ def render_arena_anthem(
 
     components.html(player_html, height=65)
 
+import streamlit.components.v1 as components
+
 def play_franchise_audio(team_name: str) -> None:
-    """Plays pure background anthem automatically across all 4 franchises."""
+    """Plays pure background anthem automatically across all 4 franchises with robust autoplay."""
     clean_team = str(team_name).lower()
 
-    # 4-Team Anthem Mapping
     if any(kw in clean_team for kw in ["gayatri", "gi"]):
-        video_id = "4pJPj_fkQhc"  # Mumbai Indians - Duniya Hila Denge Hum
+        video_id = "4pJPj_fkQhc"  # MI - Duniya Hila Denge Hum
         track_label = "Duniya Hila Denge Hum • Gayatri Indians"
     elif any(kw in clean_team for kw in ["pooja", "psk"]):
         video_id = "ozVfeBqJnbs"  # CSK Whistle Podu
@@ -542,40 +543,149 @@ def play_franchise_audio(team_name: str) -> None:
         video_id = "GkQprQygqk4"  # KKR Korbo Lorbo Jeetbo
         track_label = "Korbo Lorbo Jeetbo • Komal Knight Riders"
     elif any(kw in clean_team for kw in ["bhagyashree", "rcb"]):
-        video_id = "WOZSI2_m-3o"  # Alan Walker, Sofiloud - Team Side feat. RCB
+        video_id = "WOZSI2_m-3o"  # Alan Walker feat. RCB - Team Side
         track_label = "Team Side (Play Bold) • Royal Challengers of Bhagyashree"
     else:
         return
 
-    # Visual HUD status badge
-    st.markdown(
-        f"""
-        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(251, 191, 36, 0.4); 
-                    border-radius: 0.75rem; padding: 0.45rem 0.85rem; margin-bottom: 1rem; 
-                    display: flex; align-items: center; justify-content: space-between;">
-            <div style="color: #fbbf24; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
-                <span style="width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981; display: inline-block;"></span>
-                🎵 PLAYING LIVE ARENA AUDIO: <strong style="color:#ffffff;">{track_label}</strong>
+    player_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+            body {{ background: transparent; overflow: hidden; }}
+            .audio-panel {{
+                background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 58, 138, 0.9));
+                border: 1.5px solid #fbbf24;
+                border-left: 5px solid #fbbf24;
+                border-radius: 0.85rem;
+                padding: 0.55rem 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(251, 191, 36, 0.25);
+            }}
+            .meta-group {{ display: flex; align-items: center; gap: 0.65rem; }}
+            .pulse-dot {{
+                width: 10px; height: 10px;
+                background-color: #10b981;
+                border-radius: 50%;
+                box-shadow: 0 0 8px #10b981;
+                animation: liveBlink 1.4s infinite ease-in-out;
+            }}
+            @keyframes liveBlink {{
+                0%, 100% {{ transform: scale(0.9); opacity: 0.75; }}
+                50% {{ transform: scale(1.3); opacity: 1; }}
+            }}
+            .track-title {{
+                color: #fbbf24; font-size: 0.85rem; font-weight: 800;
+                text-transform: uppercase; letter-spacing: 0.5px;
+            }}
+            .track-sub {{ color: #94a3b8; font-size: 0.72rem; font-weight: 600; }}
+            .action-btn {{
+                background: linear-gradient(135deg, #d97706, #fbbf24);
+                color: #0f172a; border: none; border-radius: 2rem;
+                padding: 0.4rem 1.1rem; font-size: 0.78rem; font-weight: 900;
+                cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+                box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+                white-space: nowrap;
+            }}
+            .action-btn:hover {{ transform: scale(1.04); }}
+            #yt-hidden-frame {{
+                position: absolute;
+                width: 200px;
+                height: 50px;
+                opacity: 0.001;
+                pointer-events: none;
+                top: 0; left: 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="audio-panel">
+            <div class="meta-group">
+                <div class="pulse-dot"></div>
+                <div>
+                    <div class="track-title">🎵 {track_label}</div>
+                    <div class="track-sub">Continuous Arena Loop • Auto-Broadcasting</div>
+                </div>
             </div>
-            <span style="color: #94a3b8; font-size: 0.75rem; font-style: italic;">Auto-Playing</span>
+            <div>
+                <button id="ctrl-btn" class="action-btn" onclick="togglePlay()">
+                    <span id="btn-icon">⏸</span> <span id="btn-txt">PAUSE</span>
+                </button>
+            </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
-    # 1x1 zero-dimension iframe with autoplay enabled
-    components.html(
-        f"""
-        <iframe 
-            width="1" 
-            height="1" 
-            src="https://www.youtube.com/embed/{video_id}?autoplay=1&loop=1&playlist={video_id}&enablejsapi=1" 
-            allow="autoplay" 
-            style="display:none; border:0;">
-        </iframe>
-        """,
-        height=1,
-    )
+        <div id="yt-hidden-frame">
+            <iframe 
+                id="yt-player"
+                width="200" 
+                height="50" 
+                src="https://www.youtube.com/embed/{video_id}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist={video_id}&playsinline=1&controls=0"
+                allow="autoplay; encrypted-media"
+                frameborder="0">
+            </iframe>
+        </div>
+
+        <script>
+            let isPlaying = true;
+            const iframe = document.getElementById('yt-player');
+            const btnTxt = document.getElementById('btn-txt');
+            const btnIcon = document.getElementById('btn-icon');
+
+            function postYT(command, args=[]) {{
+                if (iframe && iframe.contentWindow) {{
+                    iframe.contentWindow.postMessage(JSON.stringify({{
+                        event: 'command',
+                        func: command,
+                        args: args
+                    }}), '*');
+                }}
+            }}
+
+            function togglePlay() {{
+                if (isPlaying) {{
+                    postYT('pauseVideo');
+                    isPlaying = false;
+                    btnTxt.textContent = "PLAY WAR ANTHEM";
+                    btnIcon.textContent = "▶";
+                }} else {{
+                    postYT('playVideo');
+                    isPlaying = true;
+                    btnTxt.textContent = "PAUSE";
+                    btnIcon.textContent = "⏸";
+                }}
+            }}
+
+            // Force aggressive playback initiation on component mount
+            window.addEventListener('load', () => {{
+                setTimeout(() => {{
+                    postYT('playVideo');
+                }}, 300);
+                setTimeout(() => {{
+                    postYT('playVideo');
+                }}, 800);
+            }});
+
+            // Listen for loop back
+            window.addEventListener('message', (e) => {{
+                try {{
+                    const data = JSON.parse(e.data);
+                    if (data.event === 'onStateChange' && data.info === 0) {{
+                        postYT('seekTo', [0, true]);
+                        postYT('playVideo');
+                    }}
+                }} catch (err) {{}}
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    components.html(player_html, height=60)
 
 def render_top_navigation_bar(current_page: str = "Home") -> None:
     """Render a clean status & sync bar without duplicate page links."""
