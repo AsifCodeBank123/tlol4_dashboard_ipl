@@ -353,7 +353,7 @@ import streamlit.components.v1 as components
 
 
 def render_arena_anthem(
-    video_id: str = "yq3SedbPF08",
+    video_id: str = "BDx5JUY526o",
     title: str = "TLOL4 ARENA • IPL Stadium EDM Theme",
 ) -> None:
     """Renders a pure audio controller with YouTube completely hidden off-screen."""
@@ -478,7 +478,7 @@ def render_arena_anthem(
                     width: '250',
                     videoId: '{video_id}',
                     playerVars: {{
-                        'autoplay': 1,
+                        'autoplay': 0,
                         'controls': 0,
                         'playsinline': 1,
                         'disablekb': 1
