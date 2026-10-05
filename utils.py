@@ -353,181 +353,176 @@ import streamlit.components.v1 as components
 
 
 def render_arena_anthem(
-    video_id: str = "BDx5JUY526o",
+    video_id: str = "qySTIDgvY3g",
     title: str = "TLOL4 ARENA • IPL Stadium EDM Theme",
 ) -> None:
-    """Renders a pure audio controller with YouTube completely hidden off-screen."""
-    player_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            * {{
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            }}
-            body {{
-                background: transparent;
-                overflow: hidden;
-            }}
-            .arena-controller {{
-                background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 58, 138, 0.92));
-                border: 1.5px solid #fbbf24;
-                border-radius: 0.85rem;
-                padding: 0.6rem 1.1rem;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 1rem;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(251, 191, 36, 0.25);
-            }}
-            .stream-meta {{
-                display: flex;
-                align-items: center;
-                gap: 0.65rem;
-            }}
-            .live-dot {{
-                width: 9px;
-                height: 9px;
-                background-color: #10b981;
-                border-radius: 50%;
-                box-shadow: 0 0 8px #10b981;
-                animation: liveBlink 1.4s infinite ease-in-out;
-            }}
-            @keyframes liveBlink {{
-                0%, 100% {{ transform: scale(0.9); opacity: 0.75; }}
-                50% {{ transform: scale(1.3); opacity: 1; }}
-            }}
-            .title-text {{
-                color: #fbbf24;
-                font-size: 0.85rem;
-                font-weight: 800;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }}
-            .sub-text {{
-                color: #94a3b8;
-                font-size: 0.72rem;
-                font-weight: 600;
-            }}
-            .play-btn {{
-                background: linear-gradient(135deg, #d97706, #fbbf24);
-                color: #0f172a;
-                border: none;
-                border-radius: 2rem;
-                padding: 0.4rem 1.1rem;
-                font-size: 0.78rem;
-                font-weight: 900;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 0.45rem;
-                box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
-                transition: transform 0.15s ease, box-shadow 0.15s ease;
-                white-space: nowrap;
-            }}
-            .play-btn:hover {{
-                transform: scale(1.04);
-                box-shadow: 0 0 16px rgba(251, 191, 36, 0.65);
-            }}
-            /* Completely offscreen - never visible to users, yet active for browser audio */
-            #offscreen-audio-pod {{
-                position: fixed;
-                left: -9999px;
-                top: -9999px;
-                width: 250px;
-                height: 200px;
-                visibility: hidden;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="arena-controller">
-            <div class="stream-meta">
-                <div class="live-dot"></div>
-                <div>
-                    <div class="title-text">🎺 {title}</div>
-                    <div class="sub-text">TLOL Stadium Audio Broadcast</div>
-                </div>
-            </div>
+    """Renders a pure audio broadcast controller with robust YouTube playback."""
+    player_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        * {{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }}
+        body {{
+            background: transparent;
+            overflow: hidden;
+        }}
+        .arena-controller {{
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 58, 138, 0.92));
+            border: 1.5px solid #fbbf24;
+            border-left: 5px solid #fbbf24;
+            border-radius: 0.85rem;
+            padding: 0.6rem 1.15rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(251, 191, 36, 0.25);
+        }}
+        .stream-meta {{
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }}
+        .live-dot {{
+            width: 9px;
+            height: 9px;
+            background-color: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+            animation: liveBlink 1.4s infinite ease-in-out;
+        }}
+        @keyframes liveBlink {{
+            0%, 100% {{ transform: scale(0.9); opacity: 0.75; }}
+            50% {{ transform: scale(1.3); opacity: 1; }}
+        }}
+        .title-text {{
+            color: #fbbf24;
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .sub-text {{
+            color: #94a3b8;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }}
+        .play-btn {{
+            background: linear-gradient(135deg, #d97706, #fbbf24);
+            color: #0f172a;
+            border: none;
+            border-radius: 2rem;
+            padding: 0.42rem 1.2rem;
+            font-size: 0.78rem;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            white-space: nowrap;
+        }}
+        .play-btn:hover {{
+            transform: scale(1.04);
+            box-shadow: 0 0 16px rgba(251, 191, 36, 0.65);
+        }}
+        /* Keep full dimensions so YouTube thinks it's visible, but hide via clip & opacity */
+        #yt-carrier {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 150px;
+            opacity: 0.001;
+            pointer-events: none;
+            z-index: -1;
+        }}
+    </style>
+</head>
+<body>
+    <div class="arena-controller">
+        <div class="stream-meta">
+            <div class="live-dot"></div>
             <div>
-                <button id="toggle-btn" class="play-btn" onclick="togglePlayback()">
-                    <span id="btn-icon">▶</span> <span id="btn-label">PLAY ANTHEM</span>
-                </button>
+                <div class="title-text">🎺 {title}</div>
+                <div id="status-sub" class="sub-text">Arena Stadium Audio • Live Stream</div>
             </div>
         </div>
-
-        <div id="offscreen-audio-pod">
-            <div id="yt-audio-anchor"></div>
+        <div>
+            <button id="toggle-btn" class="play-btn" onclick="togglePlayback()">
+                <span id="btn-icon">▶</span> <span id="btn-label">PLAY ANTHEM</span>
+            </button>
         </div>
+    </div>
 
-        <script src="https://www.youtube.com/iframe_api"></script>
-        <script>
-            let player;
-            let active = false;
-            const btn = document.getElementById('toggle-btn');
-            const icon = document.getElementById('btn-icon');
-            const label = document.getElementById('btn-label');
+    <!-- Hardcoded iframe with enablejsapi=1 - avoids all JS loader timing bugs -->
+    <div id="yt-carrier">
+        <iframe 
+            id="audio-frame"
+            width="200" 
+            height="150" 
+            src="https://www.youtube.com/embed/{video_id}?enablejsapi=1&autoplay=0&controls=0&playsinline=1&loop=1&playlist={video_id}" 
+            allow="autoplay; encrypted-media"
+            frameborder="0">
+        </iframe>
+    </div>
 
-            function onYouTubeIframeAPIReady() {{
-                player = new YT.Player('yt-audio-anchor', {{
-                    height: '200',
-                    width: '250',
-                    videoId: '{video_id}',
-                    playerVars: {{
-                        'autoplay': 0,
-                        'controls': 1,
-                        'playsinline': 1,
-                        'disablekb': 1
-                    }},
-                    events: {{
-                        'onReady': (e) => {{
-                            e.target.playVideo();
-                        }},
-                        'onStateChange': onPlayerStateChange
-                    }}
-                }});
+    <script>
+        let isPlaying = false;
+        const iframe = document.getElementById('audio-frame');
+        const icon = document.getElementById('btn-icon');
+        const label = document.getElementById('btn-label');
+        const statusSub = document.getElementById('status-sub');
+
+        function sendCommand(func, args=[]) {{
+            if (iframe && iframe.contentWindow) {{
+                iframe.contentWindow.postMessage(JSON.stringify({{
+                    event: 'command',
+                    func: func,
+                    args: args
+                }}), '*');
             }}
+        }}
 
-            function onPlayerStateChange(e) {{
-                // YT.PlayerState.ENDED is 0: loop automatically
-                if (e.data === 0) {{
-                    player.seekTo(0);
-                    player.playVideo();
-                }}
-                // Playing
-                if (e.data === 1) {{
-                    active = true;
-                    icon.textContent = "⏸";
-                    label.textContent = "PAUSE";
-                }}
-                // Paused
-                if (e.data === 2) {{
-                    active = false;
-                    icon.textContent = "▶";
-                    label.textContent = "PLAY ANTHEM";
-                }}
+        function togglePlayback() {{
+            if (!isPlaying) {{
+                sendCommand('playVideo');
+                isPlaying = true;
+                icon.textContent = "⏸";
+                label.textContent = "PAUSE";
+                statusSub.textContent = "Live Stadium Loop Streaming";
+            }} else {{
+                sendCommand('pauseVideo');
+                isPlaying = false;
+                icon.textContent = "▶";
+                label.textContent = "PLAY ANTHEM";
+                statusSub.textContent = "Paused";
             }}
+        }}
 
-            function togglePlayback() {{
-                if (!player) return;
-                if (!active) {{
-                    player.playVideo();
-                }} else {{
-                    player.pauseVideo();
+        // Listen for YouTube events to handle infinite loop rewind
+        window.addEventListener('message', function(event) {{
+            try {{
+                const data = JSON.parse(event.data);
+                // State 0 is YT.PlayerState.ENDED
+                if (data.event === 'onStateChange' && data.info === 0) {{
+                    sendCommand('seekTo', [0, true]);
+                    sendCommand('playVideo');
                 }}
-            }}
-        </script>
-    </body>
-    </html>
-    """
+            }} catch (err) {{}}
+        }});
+    </script>
+</body>
+</html>"""
 
     components.html(player_html, height=65)
-
-import streamlit.components.v1 as components
 
 def play_franchise_audio(team_name: str) -> None:
     """Plays pure background anthem automatically across all 4 franchises with robust autoplay."""
