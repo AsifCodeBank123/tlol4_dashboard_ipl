@@ -479,7 +479,7 @@ def render_arena_anthem(
                     videoId: '{video_id}',
                     playerVars: {{
                         'autoplay': 0,
-                        'controls': 0,
+                        'controls': 1,
                         'playsinline': 1,
                         'disablekb': 1
                     }},
