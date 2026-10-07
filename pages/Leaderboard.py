@@ -109,13 +109,50 @@ def render_leaderboard_styles() -> None:
 
 
 def render_podium(top_three_df: pd.DataFrame) -> None:
-    """Render a dynamic 3D-styled Olympic podium for ranks 2, 1, and 3."""
+    """Render a dynamic Olympic podium that handles ties correctly."""
     if len(top_three_df) < 3:
         return
 
+    # Check ties to format labels
+    rank_counts = top_three_df["Rank"].value_counts()
+
+    def get_podium_slot_meta(rank_val: int):
+        is_tied = rank_counts.get(rank_val, 0) > 1
+        label_rank = f"T-{rank_val}" if is_tied else f"#{rank_val}"
+
+        if rank_val == 1:
+            return {
+                "icon": "👑",
+                "tag": f"LEAGUE MVP ({label_rank})",
+                "card_class": "podium-first",
+                "color": "#fbbf24",
+                "font_size": "2.7rem",
+            }
+        elif rank_val == 2:
+            return {
+                "icon": "🥈",
+                "tag": f"RANK {label_rank}",
+                "card_class": "podium-second",
+                "color": "#94a3b8",
+                "font_size": "2rem",
+            }
+        else:
+            return {
+                "icon": "🥉",
+                "tag": f"RANK {label_rank}",
+                "card_class": "podium-third",
+                "color": "#b45309",
+                "font_size": "2rem",
+            }
+
+    # Center is index 0, Left is index 1, Right is index 2
     first = top_three_df.iloc[0]
     second = top_three_df.iloc[1]
     third = top_three_df.iloc[2]
+
+    meta_first = get_podium_slot_meta(int(first["Rank"]))
+    meta_second = get_podium_slot_meta(int(second["Rank"]))
+    meta_third = get_podium_slot_meta(int(third["Rank"]))
 
     m1 = get_team_meta(first["Team"])
     m2 = get_team_meta(second["Team"])
@@ -123,28 +160,28 @@ def render_podium(top_three_df: pd.DataFrame) -> None:
 
     podium_html = (
         f'<div class="podium-container">'
-        # Silver - Rank 2
-        f'<div class="podium-card podium-second">'
-        f'<div style="font-size: 2rem;">🥈</div>'
-        f'<div style="color: #94a3b8; font-weight: 800; font-size: 0.8rem; letter-spacing: 1.5px; text-transform: uppercase;">RUNNER UP</div>'
+        # Left Slot (Index 1)
+        f'<div class="podium-card {meta_second["card_class"]}">'
+        f'<div style="font-size: {meta_second["font_size"]};">{meta_second["icon"]}</div>'
+        f'<div style="color: {meta_second["color"]}; font-weight: 800; font-size: 0.8rem; letter-spacing: 1.5px; text-transform: uppercase;">{meta_second["tag"]}</div>'
         f'<div style="color: #ffffff; font-weight: 900; font-size: 1.25rem; margin: 0.4rem 0 0.2rem 0;">{second["Participant"]}</div>'
         f'<div style="color: {m2["color"]}; font-size: 0.8rem; font-weight: 700;">{m2["emoji"]} {m2["short_name"]}</div>'
         f'<div style="color: #ffffff; font-weight: 900; font-size: 1.6rem; margin-top: 0.5rem;">{format_points(second["TotalPoints"])} <span style="font-size:0.8rem; color:#94a3b8;">PTS</span></div>'
         f'<div style="margin-top:0.6rem; background:rgba(148,163,184,0.1); border-radius:0.4rem; padding:0.25rem; font-size:0.75rem; color:#cbd5e1;">{int(second["Sports_Count"])} Disciplines • {int(second["Wins"])} Wins</div>'
         f'</div>'
-        # Gold - Rank 1
-        f'<div class="podium-card podium-first">'
-        f'<div style="font-size: 2.7rem; filter: drop-shadow(0 0 12px #fbbf24);">👑</div>'
-        f'<div style="color: #fbbf24; font-weight: 900; font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase;">LEAGUE MVP</div>'
+        # Center Slot (Index 0 - Highest)
+        f'<div class="podium-card {meta_first["card_class"]}">'
+        f'<div style="font-size: {meta_first["font_size"]}; filter: drop-shadow(0 0 12px {meta_first["color"]});">{meta_first["icon"]}</div>'
+        f'<div style="color: {meta_first["color"]}; font-weight: 900; font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase;">{meta_first["tag"]}</div>'
         f'<div style="color: #ffffff; font-weight: 900; font-size: 1.5rem; margin: 0.4rem 0 0.2rem 0;">{first["Participant"]}</div>'
         f'<div style="color: {m1["color"]}; font-size: 0.85rem; font-weight: 800;">{m1["emoji"]} {m1["name"]}</div>'
         f'<div style="color: #fbbf24; font-weight: 900; font-size: 2.1rem; margin-top: 0.5rem; text-shadow:0 0 15px rgba(251,191,36,0.4);">{format_points(first["TotalPoints"])} <span style="font-size:0.9rem; color:#cbd5e1;">PTS</span></div>'
         f'<div style="margin-top:0.6rem; background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.3); border-radius:0.4rem; padding:0.35rem; font-size:0.8rem; color:#fef08a; font-weight:700;">⭐ {int(first["Sports_Count"])} Disciplines • {int(first["Wins"])} Wins ⭐</div>'
         f'</div>'
-        # Bronze - Rank 3
-        f'<div class="podium-card podium-third">'
-        f'<div style="font-size: 2rem;">🥉</div>'
-        f'<div style="color: #b45309; font-weight: 800; font-size: 0.8rem; letter-spacing: 1.5px; text-transform: uppercase;">2ND RUNNER UP</div>'
+        # Right Slot (Index 2)
+        f'<div class="podium-card {meta_third["card_class"]}">'
+        f'<div style="font-size: {meta_third["font_size"]};">{meta_third["icon"]}</div>'
+        f'<div style="color: {meta_third["color"]}; font-weight: 800; font-size: 0.8rem; letter-spacing: 1.5px; text-transform: uppercase;">{meta_third["tag"]}</div>'
         f'<div style="color: #ffffff; font-weight: 900; font-size: 1.25rem; margin: 0.4rem 0 0.2rem 0;">{third["Participant"]}</div>'
         f'<div style="color: {m3["color"]}; font-size: 0.8rem; font-weight: 700;">{m3["emoji"]} {m3["short_name"]}</div>'
         f'<div style="color: #ffffff; font-weight: 900; font-size: 1.6rem; margin-top: 0.5rem;">{format_points(third["TotalPoints"])} <span style="font-size:0.8rem; color:#94a3b8;">PTS</span></div>'
@@ -154,12 +191,15 @@ def render_podium(top_three_df: pd.DataFrame) -> None:
     )
     st.markdown(podium_html, unsafe_allow_html=True)
 
-
 def render_aggregated_player_card(
-    participant_name: str, team_name: str, group_df: pd.DataFrame, rank: int
+    participant_name: str,
+    team_name: str,
+    group_df: pd.DataFrame,
+    rank_val: int,
+    rank_label: str,
 ) -> None:
-    """Render an individual athlete card without indentation parsing bugs."""
-    medal_symbol = MEDALS.get(rank, f"#{rank}")
+    """Render an individual athlete card with tie-aware rank badge."""
+    medal_symbol = MEDALS.get(rank_val, "")
     team = get_team_meta(team_name)
 
     total_points = group_df["TotalPoints"].sum()
@@ -167,14 +207,14 @@ def render_aggregated_player_card(
     matches = int(group_df["Matches"].sum())
     wins = int(group_df["Wins"].sum())
 
-    # Podium glow classes for ranks 1-3
-    if rank == 1:
+    # Styling based on mathematical rank tier
+    if rank_val == 1:
         card_border = "border: 2px solid #fbbf24; box-shadow: 0 0 20px rgba(251, 191, 36, 0.35);"
         rank_badge_bg = "background: linear-gradient(90deg, #d97706, #fbbf24); color: #000000;"
-    elif rank == 2:
+    elif rank_val == 2:
         card_border = "border: 1.5px solid #94a3b8; box-shadow: 0 0 16px rgba(148, 163, 184, 0.2);"
         rank_badge_bg = "background: linear-gradient(90deg, #475569, #94a3b8); color: #ffffff;"
-    elif rank == 3:
+    elif rank_val == 3:
         card_border = "border: 1.5px solid #b45309; box-shadow: 0 0 16px rgba(180, 83, 9, 0.2);"
         rank_badge_bg = "background: linear-gradient(90deg, #78350f, #b45309); color: #ffffff;"
     else:
@@ -213,7 +253,7 @@ def render_aggregated_player_card(
         f'margin-bottom: 1.15rem; {card_border} border-left: 6px solid {team["color"]};">'
         f'<div style="display: flex; justify-content: space-between; align-items: center;">'
         f'<span style="{rank_badge_bg} font-weight: 900; font-size: 0.78rem; padding: 0.25rem 0.75rem; border-radius: 2rem; letter-spacing: 1px;">'
-        f'{medal_symbol} RANK #{rank}'
+        f'{medal_symbol} RANK {rank_label}'
         f'</span>'
         f'<span style="color: #cbd5e1; font-size: 0.8rem; font-weight: 700; background: rgba(255,255,255,0.05); padding: 0.2rem 0.6rem; border-radius: 0.5rem;">'
         f'{team["emoji"]} {team["short_name"]}'
@@ -303,7 +343,7 @@ def main() -> None:
         st.info("Individual athlete records will populate once match results are entered.")
         return
 
-    # Aggregate total athlete points across all sports
+    ## Aggregate total athlete points across all sports
     overall_rankings = (
         athlete_df.groupby(["Participant", "Team"], as_index=False)
         .agg(
@@ -311,10 +351,16 @@ def main() -> None:
             Wins=("Wins", "sum"),
             Sports_Count=("Sport", "nunique"),
         )
-        .sort_values("TotalPoints", ascending=False)
-        .reset_index(drop=True)
     )
-    overall_rankings["Rank"] = overall_rankings.index + 1
+
+    # 👈 Use true competition min-ranking
+    overall_rankings["Rank"] = overall_rankings["TotalPoints"].rank(method="min", ascending=False).astype(int)
+
+    # Sort by Rank (ties ordered by Wins as secondary tie-breaker, then name)
+    overall_rankings = overall_rankings.sort_values(
+        by=["Rank", "Wins", "Participant"], 
+        ascending=[True, False, True]
+    ).reset_index(drop=True)
 
     # Render Top-3 Podium (if at least 3 players exist)
     if len(overall_rankings) >= 3:
@@ -392,13 +438,24 @@ def main() -> None:
         return
 
     # Recalculate visible ranking based on active filter
+    # Recalculate visible ranking based on active filter
     active_totals = (
         filtered_df.groupby(["Participant", "Team"], as_index=False)["TotalPoints"]
         .sum()
-        .sort_values("TotalPoints", ascending=False)
-        .reset_index(drop=True)
     )
-    active_totals["Filtered_Rank"] = active_totals.index + 1
+    
+    # 👈 Assign true competition rank
+    active_totals["Filtered_Rank"] = active_totals["TotalPoints"].rank(method="min", ascending=False).astype(int)
+    active_totals = active_totals.sort_values(
+        by=["Filtered_Rank", "TotalPoints", "Participant"], 
+        ascending=[True, False, True]
+    ).reset_index(drop=True)
+
+    # Compute tie label (e.g. T-1 vs #1)
+    rank_counts = active_totals["Filtered_Rank"].value_counts()
+    active_totals["RankLabel"] = active_totals["Filtered_Rank"].apply(
+        lambda r: f"T-{r}" if rank_counts[r] > 1 else f"#{r}"
+    )
 
     # --------------------------------------------------
     # 6. ATHLETE SCORECARD GRID (2-COLUMN LAYOUT)
@@ -417,6 +474,7 @@ def main() -> None:
                     item["Team"],
                     participant_records,
                     int(item["Filtered_Rank"]),
+                    str(item["RankLabel"]),  # 👈 Passed dynamic label
                 )
 
 

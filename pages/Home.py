@@ -232,10 +232,13 @@ def render_home_styles() -> None:
         unsafe_allow_html=True,
     )
 
-import textwrap
+import pandas as pd
+import streamlit as st
+from utils import format_points, get_team_meta
+
 
 def render_compact_home_podium(participants_df: pd.DataFrame) -> None:
-    """Render a space-efficient Top-3 MVP Podium without markdown indent leaks."""
+    """Render a space-efficient Top-3 MVP Podium with tie handling and zero indent leakage."""
     if participants_df.empty:
         return
 
@@ -254,94 +257,140 @@ def render_compact_home_podium(participants_df: pd.DataFrame) -> None:
     if athletes.empty:
         return
 
-    top3 = (
-        athletes.groupby(["Participant", "Team"], as_index=False)["TotalScore"]
-        .sum()
-        .sort_values(by="TotalScore", ascending=False)
+    aggregated = (
+        athletes.groupby(["Participant", "Team"], as_index=False)
+        .agg(
+            TotalScore=("TotalScore", "sum"),
+            Wins=("Wins", "sum"),
+        )
+    )
+
+    # Competition-style min-ranking
+    aggregated["Rank"] = aggregated["TotalScore"].rank(method="min", ascending=False).astype(int)
+
+    # Sort by Rank ascending, then Wins descending, then Name
+    top_performers = (
+        aggregated.sort_values(
+            by=["Rank", "Wins", "Participant"],
+            ascending=[True, False, True],
+        )
         .head(3)
         .reset_index(drop=True)
     )
 
-    if len(top3) < 3:
+    if len(top_performers) < 3:
         return
 
-    first = top3.iloc[0]
-    second = top3.iloc[1]
-    third = top3.iloc[2]
+    rank_freq = aggregated["Rank"].value_counts()
 
-    m1 = get_team_meta(first["Team"])
-    m2 = get_team_meta(second["Team"])
-    m3 = get_team_meta(third["Team"])
+    def get_slot_decorations(rank_num: int):
+        is_tied = rank_freq.get(rank_num, 0) > 1
+        label = f"T-{rank_num}" if is_tied else f"#{rank_num}"
 
-    # Using textwrap.dedent and zero indentation prevents the 4-space code block bug
-    podium_html = textwrap.dedent(f"""
-<style>
-.mini-podium-shelf {{
-    display: grid;
-    grid-template-columns: 1fr 1.08fr 1fr;
-    gap: 0.75rem;
-    align-items: flex-end;
-    margin: 0.5rem 0 1.25rem 0;
-}}
-.mini-pedestal {{
-    background: rgba(15, 23, 42, 0.9);
-    border-radius: 0.85rem;
-    padding: 0.85rem 0.6rem;
-    text-align: center;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-}}
-.pedestal-first {{
-    border: 1.5px solid #fbbf24;
-    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
-    box-shadow: 0 0 20px rgba(251, 191, 36, 0.35);
-    padding: 1.1rem 0.6rem;
-}}
-.pedestal-second {{
-    border: 1px solid #94a3b8;
-}}
-.pedestal-third {{
-    border: 1px solid #b45309;
-}}
-</style>
-<div class="mini-podium-shelf">
-<div class="mini-pedestal pedestal-second">
-<div style="font-size: 1.4rem;">🥈</div>
-<div style="color: #94a3b8; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">RANK #2</div>
-<div style="color: #ffffff; font-weight: 900; font-size: 1.05rem; margin: 0.15rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{second["Participant"]}</div>
-<div style="color: {m2['color']}; font-size: 0.72rem; font-weight: 700;">{m2['emoji']} {m2['short_name']}</div>
-<div style="color: #ffffff; font-weight: 900; font-size: 1.35rem; margin-top: 0.3rem;">{format_points(second["TotalScore"])} <span style="font-size: 0.7rem; color: #94a3b8;">PTS</span></div>
-</div>
-<div class="mini-pedestal pedestal-first">
-<div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px #fbbf24);">👑</div>
-<div style="color: #fbbf24; font-size: 0.7rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;">LEAGUE MVP</div>
-<div style="color: #ffffff; font-weight: 900; font-size: 1.25rem; margin: 0.2rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{first["Participant"]}</div>
-<div style="color: {m1['color']}; font-size: 0.75rem; font-weight: 800;">{m1['emoji']} {m1['short_name']}</div>
-<div style="color: #fbbf24; font-weight: 900; font-size: 1.65rem; margin-top: 0.35rem; text-shadow: 0 0 10px rgba(251,191,36,0.4);">{format_points(first["TotalScore"])} <span style="font-size: 0.75rem; color: #cbd5e1;">PTS</span></div>
-</div>
-<div class="mini-pedestal pedestal-third">
-<div style="font-size: 1.4rem;">🥉</div>
-<div style="color: #b45309; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">RANK #3</div>
-<div style="color: #ffffff; font-weight: 900; font-size: 1.05rem; margin: 0.15rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{third["Participant"]}</div>
-<div style="color: {m3['color']}; font-size: 0.72rem; font-weight: 700;">{m3['emoji']} {m3['short_name']}</div>
-<div style="color: #ffffff; font-weight: 900; font-size: 1.35rem; margin-top: 0.3rem;">{format_points(third["TotalScore"])} <span style="font-size: 0.7rem; color: #94a3b8;">PTS</span></div>
-</div>
-</div>
-""").strip()
+        if rank_num == 1:
+            return {
+                "icon": "👑",
+                "tag": f"LEAGUE MVP ({label})",
+                "class": "pedestal-first",
+                "color": "#fbbf24",
+            }
+        elif rank_num == 2:
+            return {
+                "icon": "🥈",
+                "tag": f"RANK {label}",
+                "class": "pedestal-second",
+                "color": "#94a3b8",
+            }
+        else:
+            return {
+                "icon": "🥉",
+                "tag": f"RANK {label}",
+                "class": "pedestal-third",
+                "color": "#b45309",
+            }
+
+    p_center = top_performers.iloc[0]
+    p_left = top_performers.iloc[1]
+    p_right = top_performers.iloc[2]
+
+    meta_center = get_slot_decorations(int(p_center["Rank"]))
+    meta_left = get_slot_decorations(int(p_left["Rank"]))
+    meta_right = get_slot_decorations(int(p_right["Rank"]))
+
+    t_center = get_team_meta(p_center["Team"])
+    t_left = get_team_meta(p_left["Team"])
+    t_right = get_team_meta(p_right["Team"])
+
+    # Completely flush HTML string without HTML comments or inner indentations
+    podium_html = (
+        '<style>'
+        '.mini-podium-shelf {'
+        ' display: grid;'
+        ' grid-template-columns: 1fr 1.08fr 1fr;'
+        ' gap: 0.75rem;'
+        ' align-items: flex-end;'
+        ' margin: 0.5rem 0 1.25rem 0;'
+        '}'
+        '.mini-pedestal {'
+        ' background: rgba(15, 23, 42, 0.9);'
+        ' border-radius: 0.85rem;'
+        ' padding: 0.85rem 0.6rem;'
+        ' text-align: center;'
+        ' box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);'
+        '}'
+        '.pedestal-first {'
+        ' border: 1.5px solid #fbbf24;'
+        ' background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);'
+        ' box-shadow: 0 0 20px rgba(251, 191, 36, 0.35);'
+        ' padding: 1.1rem 0.6rem;'
+        '}'
+        '.pedestal-second {'
+        ' border: 1px solid #94a3b8;'
+        '}'
+        '.pedestal-third {'
+        ' border: 1px solid #b45309;'
+        '}'
+        '</style>'
+        '<div class="mini-podium-shelf">'
+        f'<div class="mini-pedestal {meta_left["class"]}">'
+        f'<div style="font-size: 1.4rem;">{meta_left["icon"]}</div>'
+        f'<div style="color: {meta_left["color"]}; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">{meta_left["tag"]}</div>'
+        f'<div style="color: #ffffff; font-weight: 900; font-size: 1.05rem; margin: 0.15rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{p_left["Participant"]}</div>'
+        f'<div style="color: {t_left["color"]}; font-size: 0.72rem; font-weight: 700;">{t_left["emoji"]} {t_left["short_name"]}</div>'
+        f'<div style="color: #ffffff; font-weight: 900; font-size: 1.35rem; margin-top: 0.3rem;">{format_points(p_left["TotalScore"])} <span style="font-size: 0.7rem; color: #94a3b8;">PTS</span></div>'
+        '</div>'
+        f'<div class="mini-pedestal {meta_center["class"]}">'
+        f'<div style="font-size: 1.8rem; filter: drop-shadow(0 0 8px {meta_center["color"]});">{meta_center["icon"]}</div>'
+        f'<div style="color: {meta_center["color"]}; font-size: 0.7rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;">{meta_center["tag"]}</div>'
+        f'<div style="color: #ffffff; font-weight: 900; font-size: 1.25rem; margin: 0.2rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{p_center["Participant"]}</div>'
+        f'<div style="color: {t_center["color"]}; font-size: 0.75rem; font-weight: 800;">{t_center["emoji"]} {t_center["short_name"]}</div>'
+        f'<div style="color: #fbbf24; font-weight: 900; font-size: 1.65rem; margin-top: 0.35rem; text-shadow: 0 0 10px rgba(251,191,36,0.4);">{format_points(p_center["TotalScore"])} <span style="font-size: 0.75rem; color: #cbd5e1;">PTS</span></div>'
+        '</div>'
+        f'<div class="mini-pedestal {meta_right["class"]}">'
+        f'<div style="font-size: 1.4rem;">{meta_right["icon"]}</div>'
+        f'<div style="color: {meta_right["color"]}; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">{meta_right["tag"]}</div>'
+        f'<div style="color: #ffffff; font-weight: 900; font-size: 1.05rem; margin: 0.15rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{p_right["Participant"]}</div>'
+        f'<div style="color: {t_right["color"]}; font-size: 0.72rem; font-weight: 700;">{t_right["emoji"]} {t_right["short_name"]}</div>'
+        f'<div style="color: #ffffff; font-weight: 900; font-size: 1.35rem; margin-top: 0.3rem;">{format_points(p_right["TotalScore"])} <span style="font-size: 0.7rem; color: #94a3b8;">PTS</span></div>'
+        '</div>'
+        '</div>'
+    )
 
     st.subheader("🥇 Top Individual MVPs")
     st.markdown(podium_html, unsafe_allow_html=True)
 
-def render_standings_card(team_name: str, points: float, rank: int) -> None:
-    """Render an IPL-styled championship standings card."""
+def render_standings_card(team_name: str, points: float, rank: int, is_tied: bool = False) -> None:
+    """Render an IPL-styled championship standings card with tie support."""
     meta = get_team_meta(team_name)
     is_leader = rank == 1
+    rank_str = f"T-{rank}" if is_tied else f"#{rank}"
 
     if is_leader:
         border_style = "border: 2px solid #fbbf24; border-top: 6px solid #fbbf24; box-shadow: 0 0 25px rgba(251, 191, 36, 0.4);"
-        badge_html = '<span style="background: linear-gradient(90deg, #d97706, #fbbf24); color: #000000; font-weight: 900; font-size: 0.75rem; padding: 0.25rem 0.8rem; border-radius: 1rem; letter-spacing: 1px;">👑 LEAGUE LEADER</span>'
+        badge_html = f'<span style="background: linear-gradient(90deg, #d97706, #fbbf24); color: #000000; font-weight: 900; font-size: 0.75rem; padding: 0.25rem 0.8rem; border-radius: 1rem; letter-spacing: 1px;">👑 LEAGUE LEADER ({rank_str})</span>'
     else:
         border_style = f"border: 1px solid rgba(255, 255, 255, 0.12); border-top: 5px solid {meta['color']};"
-        badge_html = f'<span style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; font-weight: 800; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 1rem; letter-spacing: 1px;">RANK #{rank}</span>'
+        badge_html = f'<span style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; font-weight: 800; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 1rem; letter-spacing: 1px;">RANK {rank_str}</span>'
 
     card_html = (
         f'<div class="standings-deck-card" style="{border_style}">'
@@ -354,7 +403,6 @@ def render_standings_card(team_name: str, points: float, rank: int) -> None:
         f'</div>'
     )
     st.markdown(card_html, unsafe_allow_html=True)
-
 
 def render_match_card(row: pd.Series) -> None:
     """Render a television broadcast-style head-to-head encounter card."""
@@ -492,18 +540,32 @@ def main() -> None:
     st.markdown("---")
 
     # --------------------------------------------------
-    # 3. CUMULATIVE TEAM STANDINGS DECK
+    # CUMULATIVE TEAM STANDINGS DECK
     # --------------------------------------------------
     st.subheader("🏆 Championship Standings Deck")
     team_scores = get_team_scores(participants)
 
     if not team_scores.empty:
-        standings_cols = st.columns(len(team_scores))
-        for rank, (col, (_, row)) in enumerate(zip(standings_cols, team_scores.iterrows()), start=1):
-            with col:
-                render_standings_card(row["Team"], row["Points"], rank)
+        # Assign true sports ranking (tied teams get the exact same rank)
+        team_scores["Rank"] = team_scores["Points"].rank(method="min", ascending=False).astype(int)
+        
+        # Sort by Rank ascending, then team name
+        team_scores = team_scores.sort_values(by=["Rank", "Team"], ascending=[True, True]).reset_index(drop=True)
+        
+        # Check for ties across teams
+        team_rank_counts = team_scores["Rank"].value_counts()
 
-    st.markdown("---")
+        standings_cols = st.columns(len(team_scores))
+        for col, (_, row) in zip(standings_cols, team_scores.iterrows()):
+            current_rank = int(row["Rank"])
+            tied = team_rank_counts.get(current_rank, 0) > 1
+            with col:
+                render_standings_card(
+                    team_name=row["Team"],
+                    points=row["Points"],
+                    rank=current_rank,
+                    is_tied=tied,
+                )
     
     # --------------------------------------------------
     # 4. COMPACT TOP-3 MVP PODIUM (NEW SECTION)
